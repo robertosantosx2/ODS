@@ -1,12 +1,12 @@
 # cafe-llama.cpp optional runtime
 
-**Status:** experimental scaffold  
+**Status:** experimental enable path  
 **Upstream:** https://github.com/quimmedes/cafe-llama.cpp  
 **Design / evidence rules:** https://github.com/robertosantosx2/LEONES/pull/96
 
 ## Role in ODS
 
-cafe-llama.cpp is an **optional advanced** inference runtime. It does **not** replace the default `llama-server`.
+cafe-llama.cpp is an **optional advanced** inference runtime. It does **not** replace the default `llama-server` or `LLM_BACKEND=llama-server`.
 
 Use it when you need:
 
@@ -17,49 +17,49 @@ Use it when you need:
 
 It remains OpenAI-compatible and GGUF-compatible, so Portal, Open WebUI, Hermes, LiteLLM, and external clients can keep the same API base URL once routing points at this runtime.
 
-## Activation (planned)
+## Enable (`ods enable cafe-llama`)
 
 ```bash
+# From the ODS install tree:
+cp -r extensions/library/services/cafe-llama extensions/services/cafe-llama
 ods enable cafe-llama
-# or select runtime per model / profile in Dashboard → Models (advanced)
+ods start cafe-llama
 ```
 
-Binary preference:
+Library recipe: `extensions/library/services/cafe-llama/`
 
-1. Official prebuilt releases from https://github.com/quimmedes/cafe-llama.cpp/releases
-2. Controlled source build when a platform/backend is not covered by releases
+1. Ensure a cafe-llama.cpp `llama-server` binary is available (build image with `CAFE_LLAMA_RELEASE_URL` or set `CAFE_LLAMA_SERVER`).
+2. Set `CAFE_LLAMA_MODEL` to a GGUF/safetensors path under the models volume.
+3. Optional advanced flags via `.env` / Dashboard (see below).
 
-## Priority parameters
+Default listen: host port **8081** (`EXT_CAFE_LLAMA_PORT`).
 
-These should map into Dashboard advanced settings and/or `LLAMA_ARG_*` / Model Switchboard:
+## Dashboard / `.env.schema`
 
-| Setting | Flag | Notes |
-|---------|------|--------|
-| GPU layers | `-ngl` | existing |
-| Host MoE | `-hmoe` / `-nhmoe` | pinned CUDA host |
-| CPU MoE | `-cmoe` / `-ncmoe` | system RAM |
-| SSD streaming | `-ssd` / `-nssd` | mmap on-demand experts |
-| Context | `-c` | existing |
-| KV type | `-ctk` / `-ctv` | include `turbo4` / `turbo3` / `turbo2` |
-| Flash attention | `-fa` | required for turbo KV |
-| Spec type | `--spec-type` | e.g. `draft-mtp` |
-| Spec draft depth | `--spec-draft-n-max` | recommended `4` |
-| Draft model | `-md` | MTP GGUF path |
-| PLE / N-gram | `--no-ngram` / `--ngram-ssd` | Qwen Flash Next |
-| Pipeline parallel | `--pipeline-parallel` | host→device overlap |
+Settings surface for operators:
 
-## Service layout
+| Key | Purpose |
+|-----|---------|
+| `CAFE_LLAMA_ENABLED` | Opt-in marker (does not change `LLM_BACKEND`) |
+| `CAFE_LLAMA_HOST` / `EXT_CAFE_LLAMA_PORT` | Bind / publish |
+| `CAFE_LLAMA_MODEL` | Model path |
+| `CAFE_LLAMA_EXTRA_ARGS` | Raw extra CLI flags |
+| `LLAMA_ARG_HOST_MOE` / `LLAMA_ARG_N_HOST_MOE` | Host MoE offload |
+| `LLAMA_ARG_CPU_MOE` / `LLAMA_ARG_N_CPU_MOE` | CPU MoE offload |
+| `LLAMA_ARG_SSD_STREAMING` / `LLAMA_ARG_N_SSD` | SSD expert streaming |
+| `LLAMA_ARG_CACHE_TYPE_K` / `V` | KV types (`turbo4`/`turbo3`/`turbo2` on cafe builds) |
+| `LLAMA_ARG_FLASH_ATTN` | Required for turbo KV |
+| `LLAMA_ARG_SPEC_TYPE` / `LLAMA_ARG_SPEC_DRAFT_N_MAX` | MTP / speculative |
+| `LLAMA_ARG_PIPELINE_PARALLEL` | Host→device overlap |
+| `LLAMA_ARG_NO_NGRAM` / `LLAMA_ARG_NGRAM_SSD` | Qwen Flash Next PLE |
 
-```text
-ods/services/cafe-llama/
-├── README.md
-├── manifest.yaml
-└── entrypoint.sh
-```
+Schema fragment (merge into `ods/.env.schema.json` `properties` for full Dashboard validation):
+
+`extensions/library/services/cafe-llama/env.schema.fragment.json`
+
+Existing stock keys already present in core schema (e.g. `LLAMA_ARG_N_CPU_MOE`, `LLAMA_ARG_FLASH_ATTN`, `LLAMA_ARG_SPEC_*`) continue to apply.
 
 ## Evidence rules
-
-Do not claim local performance from upstream or community numbers alone.
 
 | Class | Meaning |
 |-------|---------|
@@ -70,10 +70,10 @@ Do not claim local performance from upstream or community numbers alone.
 
 Only **MEASURED** results justify local performance claims.
 
-## Out of scope for this scaffold
+## Out of scope (follow-ups)
 
-- Full installer wiring and `ods enable` implementation
-- Dashboard UI changes
+- Installer auto-promotion of cafe-llama as a first-class `LLM_BACKEND` value
+- Full merge of the schema fragment into root `.env.schema.json` (if not done in the same PR)
 - Automatic ICD sweeps / recommended profiles
 - Replacement of default `llama-server` paths
 
