@@ -1,0 +1,8 @@
+{
+  "name": "cafe-llama.cpp",
+  "repository": "https://github.com/quimmedes/cafe-llama.cpp",
+  "license": "MIT",
+  "homepage": "https://github.com/quimmedes/cafe-llama.cpp",
+  "releases": "https://github.com/quimmedes/cafe-llama.cpp/releases",
+  "notes": "Optional advanced llama.cpp fork. ODS ships a compose/Dockerfile scaffold; pin a release URL at image build time. Does not replace core llama-server."
+}
