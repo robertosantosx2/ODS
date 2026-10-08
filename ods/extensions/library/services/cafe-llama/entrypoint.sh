@@ -11,8 +11,12 @@ if [[ -z "${BIN}" ]]; then
     BIN="$(command -v llama-server)"
   elif [[ -x /opt/cafe-llama/llama-server ]]; then
     BIN=/opt/cafe-llama/llama-server
+  elif [[ -x /usr/local/bin/llama-server ]]; then
+    BIN=/usr/local/bin/llama-server
   else
-    echo "cafe-llama: llama-server binary not found. Set CAFE_LLAMA_SERVER or build with CAFE_LLAMA_RELEASE_URL." >&2
+    echo "cafe-llama: llama-server binary not found." >&2
+    echo "  • Rebuild the image with a valid CAFE_LLAMA_RELEASE_URL, or" >&2
+    echo "  • Set CAFE_LLAMA_SERVER to an absolute path." >&2
     exit 1
   fi
 fi
@@ -46,4 +50,5 @@ if truthy "${LLAMA_ARG_NGRAM_SSD:-}"; then args+=(--ngram-ssd); fi
 EXTRA=( ${CAFE_LLAMA_EXTRA_ARGS:-} )
 args+=("${EXTRA[@]}")
 
+echo "cafe-llama: starting ${BIN} with model ${MODEL}"
 exec "${BIN}" "${args[@]}"

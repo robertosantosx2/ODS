@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Override for non-CUDA hosts, e.g.:
+        # CAFE_LLAMA_RELEASE_URL=https://github.com/quimmedes/cafe-llama.cpp/releases/download/0.75/llama-bin-ubuntu-x64-cpu.zip
+        CAFE_LLAMA_RELEASE_URL: ${CAFE_LLAMA_RELEASE_URL:-}
     image: ods-cafe-llama:local
     container_name: ods-cafe-llama
     restart: unless-stopped
@@ -16,6 +20,7 @@ services:
       - CAFE_LLAMA_HOST=0.0.0.0
       - CAFE_LLAMA_PORT=8081
       - CAFE_LLAMA_MODEL=${CAFE_LLAMA_MODEL:-}
+      - CAFE_LLAMA_SERVER=${CAFE_LLAMA_SERVER:-}
       - CAFE_LLAMA_EXTRA_ARGS=${CAFE_LLAMA_EXTRA_ARGS:-}
       - LLAMA_ARG_HOST_MOE=${LLAMA_ARG_HOST_MOE:-}
       - LLAMA_ARG_N_HOST_MOE=${LLAMA_ARG_N_HOST_MOE:-}
@@ -31,12 +36,20 @@ services:
       - LLAMA_ARG_PIPELINE_PARALLEL=${LLAMA_ARG_PIPELINE_PARALLEL:-}
       - LLAMA_ARG_NO_NGRAM=${LLAMA_ARG_NO_NGRAM:-}
       - LLAMA_ARG_NGRAM_SSD=${LLAMA_ARG_NGRAM_SSD:-}
+    # Optional NVIDIA GPU passthrough (ignored on non-NVIDIA hosts)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/health >/dev/null || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 90s
+      start_period: 120s
     networks:
       - ods-network
 
