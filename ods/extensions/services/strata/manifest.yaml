@@ -1,0 +1,107 @@
+# Optional Strata runtime — Qwen3.8-Flash-Next on consumer NVIDIA GPUs.
+# Not enabled by default. Does not replace llama-server.
+# Design reference: https://github.com/robertosantosx2/LEONES/tree/docs/strata-ods-integration/docs/integrations/strata
+# Upstream: https://github.com/Niko1221/Strata (MIT)
+#
+# Envelope (enforce in enable path / ICD; not schema fields):
+#   min_vram_gb: 12 | min_ram_gb: 32 | recommended_ram_gb: 64 | disk_gb_approx: 80
+# Pin STRATA_IMAGE (or source build commit) before production use.
+
+schema_version: ods.services.v1
+
+compatibility:
+  ods_min: "2.0.0"
+
+service:
+  id: strata
+  name: Strata (Qwen3.8-Flash-Next)
+  aliases: []
+  container_name: ods-strata
+  host_env: STRATA_HOST
+  default_host: strata
+  port: 8080
+  external_port_env: STRATA_PORT
+  external_port_default: 8088
+  health: /health
+  health_timeout: 30
+  startup_timeout: 600
+  ui_path: /
+  type: docker
+  gpu_backends: [nvidia]
+  compose_file: compose.yaml
+  category: optional
+  depends_on: []
+
+  # Provides inference; is not an ODS gateway client app.
+  llm:
+    consumes: false
+
+  env_vars:
+    - key: STRATA_FAMILY
+      required: false
+      description: "Model family passed as FAMILY (flash-next, coder, swift, unsloth)"
+      default: ""
+    - key: STRATA_MODEL
+      required: false
+      description: "Size/quant passed as MODEL (Q2_0, IQ2_XS, IQ3_XXS, IQ3_S, …)"
+      default: "IQ2_XS"
+    - key: STRATA_CONTEXT
+      required: false
+      description: "Context window passed as CONTEXT"
+      default: "8192"
+    - key: STRATA_VISION
+      required: false
+      description: "Vision: no | yes | cpu"
+      default: "no"
+    - key: STRATA_KV
+      required: false
+      description: "KV cache type passed as KV"
+      default: ""
+    - key: STRATA_GPU
+      required: false
+      description: "Single GPU index passed as GPU"
+      default: ""
+    - key: STRATA_GPUS
+      required: false
+      description: "Multi-GPU list — not default"
+      default: ""
+    - key: STRATA_LOW_RAM
+      required: false
+      description: "auto | on | off"
+      default: "auto"
+    - key: STRATA_API_KEY
+      required: false
+      secret: true
+      description: "Required if bound beyond loopback"
+      default: ""
+    - key: STRATA_REINSTALL
+      required: false
+      description: "Set 1 to re-run model setup after MODEL/FAMILY change"
+      default: ""
+    - key: STRATA_PORT
+      required: false
+      description: "Host port (container listens on 8080)"
+      default: "8088"
+    - key: STRATA_START_PERIOD
+      required: false
+      description: "Healthcheck start_period (first load can take several minutes)"
+      default: "600s"
+    - key: STRATA_IMAGE
+      required: false
+      description: "Pinned image tag or digest (required before production)"
+      default: ""
+
+features:
+  - id: strata-flash-next
+    name: Strata Flash Next
+    description: "Optional runtime for Qwen3.8-Flash-Next on a consumer NVIDIA GPU (not the default llama-server)."
+    icon: Cpu
+    category: ai
+    requirements:
+      services: [strata]
+      vram_gb: 12
+      disk_gb: 80
+    enabled_services_all: [strata]
+    setup_time: "~15–60 minutes (model download ~70 GB)"
+    priority: 80
+    gpu_backends: [nvidia]

@@ -1,0 +1,42 @@
+# Strata — optional Qwen3.8-Flash-Next runtime (NVIDIA path)
+# GPU devices: compose.nvidia.yaml
+# First model load / download can take several minutes — keep start_period high.
+# Weights under data/strata — do not mix with the GGUF catalog (data/models).
+
+services:
+  strata:
+    image: ${STRATA_IMAGE:-ods-strata:pin-me}
+    container_name: ods-strata
+    restart: unless-stopped
+    environment:
+      FAMILY: ${STRATA_FAMILY:-}
+      MODEL: ${STRATA_MODEL:-IQ2_XS}
+      CONTEXT: ${STRATA_CONTEXT:-8192}
+      VISION: ${STRATA_VISION:-no}
+      KV: ${STRATA_KV:-}
+      GPU: ${STRATA_GPU:-}
+      GPUS: ${STRATA_GPUS:-}
+      LOW_RAM: ${STRATA_LOW_RAM:-auto}
+      API_KEY: ${STRATA_API_KEY:-}
+      HOST: 0.0.0.0
+      PORT: "8080"
+      REINSTALL: ${STRATA_REINSTALL:-}
+    volumes:
+      - ${ODS_DATA_DIR:-./data}/strata:/data:z
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${STRATA_PORT:-8088}:8080"
+    ulimits:
+      memlock: -1
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: ${STRATA_START_PERIOD:-600s}
