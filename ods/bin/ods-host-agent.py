@@ -14901,12 +14901,24 @@ class AgentHandler(BaseHTTPRequestHandler):
             _set_model_activation_phase('loading')
             runtime_stage_started = time.time()
 
-            cafe_llama_opted_in = str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower() in {"1", "true", "yes", "on"}
+            cafe_llama_opted_in = (
+                str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower()
+                in {"1", "true", "yes", "on"}
+            )
             if cafe_llama_opted_in:
                 # Initial support is deliberately narrow: native Linux + NVIDIA.
                 # Other platforms/backends fail closed rather than silently using a different runtime.
-                if platform.system() != "Linux" or _in_container or wsl_managed.get("managed") is True or windows_native_llama or gpu_backend != "nvidia":
-                    raise RuntimeError("CAFE_LLAMA_ENABLED currently supports native Linux with NVIDIA only")
+                unsupported_cafe_host = (
+                    platform.system() != "Linux"
+                    or _in_container
+                    or wsl_managed.get("managed") is True
+                    or windows_native_llama
+                    or gpu_backend != "nvidia"
+                )
+                if unsupported_cafe_host:
+                    raise RuntimeError(
+                        "CAFE_LLAMA_ENABLED currently supports native Linux with NVIDIA only"
+                    )
                 runtime_restart_strategy = "cafe-compose"
                 if _switchboard_adapters is not None:
                     switchboard_adapter = _switchboard_adapters.CafeLlamaAdapter(
