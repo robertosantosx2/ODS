@@ -68,6 +68,7 @@ def run_runtime_activation(
         "contextVerified": None,
         "capabilities": None,
         "verifiedAt": None,
+        "completionVerified": None,
     }
     for phase in PHASES:
         try:
@@ -87,6 +88,13 @@ def run_runtime_activation(
                 **proof,
             }
         if phase.startswith("verify_") and outcome["ok"] is True:
+            if phase == "verify_completion" and outcome.get("completionVerified") is not True:
+                return {
+                    "ok": False,
+                    "phase": phase,
+                    "detail": "completion proof does not certify a real generated completion",
+                    **proof,
+                }
             contract_error = _verification_error(outcome)
             if contract_error:
                 return {
@@ -109,6 +117,7 @@ def run_runtime_activation(
                 "contextVerified": bool(outcome["contextVerified"]),
                 "capabilities": dict(outcome["capabilities"]),
                 "verifiedAt": str(outcome["verifiedAt"]),
+                "completionVerified": outcome.get("completionVerified") is True,
             }
             runtime_fields = (
                 "runtimeKind",
@@ -132,6 +141,7 @@ def run_runtime_activation(
                 "contextLength",
                 "contextVerified",
                 "capabilities",
+                "completionVerified",
                 *runtime_fields,
             )
             if phase == "verify_completion" and any(
