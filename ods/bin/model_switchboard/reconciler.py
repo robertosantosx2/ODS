@@ -79,14 +79,14 @@ def run_runtime_activation(
                 "detail": f"adapter raised: {exc}",
                 **proof,
             }
-        if not isinstance(outcome, dict) or "ok" not in outcome:
+        if not isinstance(outcome, dict) or not isinstance(outcome.get("ok"), bool):
             return {
                 "ok": False,
                 "phase": phase,
-                "detail": "adapter returned a non-contract result",
+                "detail": "adapter result must include a boolean ok",
                 **proof,
             }
-        if phase.startswith("verify_") and outcome.get("ok"):
+        if phase.startswith("verify_") and outcome["ok"] is True:
             contract_error = _verification_error(outcome)
             if contract_error:
                 return {
@@ -110,11 +110,29 @@ def run_runtime_activation(
                 "capabilities": dict(outcome["capabilities"]),
                 "verifiedAt": str(outcome["verifiedAt"]),
             }
+            runtime_fields = (
+                "runtimeKind",
+                "runtimeBuildId",
+                "artifactSha256",
+            )
+            for field in runtime_fields:
+                if field in outcome:
+                    value = outcome[field]
+                    if not isinstance(value, str) or not value.strip():
+                        return {
+                            "ok": False,
+                            "phase": phase,
+                            "detail": f"verification returned invalid {field}",
+                            **proof,
+                        }
+                    outcome_proof[field] = value.strip()
+
             stable_fields = (
                 "identity",
                 "contextLength",
                 "contextVerified",
                 "capabilities",
+                *runtime_fields,
             )
             if phase == "verify_completion" and any(
                 outcome_proof[field] != proof[field] for field in stable_fields
@@ -126,7 +144,7 @@ def run_runtime_activation(
                     **proof,
                 }
             proof = outcome_proof
-        if not outcome.get("ok"):
+        if outcome["ok"] is not True:
             return {
                 "ok": False,
                 "phase": phase,
