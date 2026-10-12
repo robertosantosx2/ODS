@@ -14921,6 +14921,10 @@ class AgentHandler(BaseHTTPRequestHandler):
             runtime_stage_started = time.time()
 
             cafe_requested = _cafe_llama_enabled(env)
+            if not cafe_requested:
+                # An explicit llama candidate overrides the previously active
+                # cafe route while its replacement is staged and verified.
+                env["_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE"] = "false"
             if cafe_requested:
                 if str(env.get("ODS_MODE") or "local").strip().lower() != "local":
                     raise RuntimeError("cafe-llama activation is supported only in ODS_MODE=local")
@@ -15769,11 +15773,12 @@ def _active_model_state_backend_kind() -> str:
 
 
 def _cafe_llama_runtime_selected(env: dict) -> bool:
-    """Use cafe only for the in-flight candidate or a previously verified route."""
-    if not _cafe_llama_enabled(env):
-        return False
-    if str(env.get("_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE") or "").lower() == "true":
+    """Use cafe for an explicit candidate or a previously verified active route."""
+    candidate = str(env.get("_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE") or "").lower()
+    if candidate == "true":
         return True
+    if candidate == "false":
+        return False
     try:
         state = json.loads((INSTALL_DIR / "data" / "model-state.json").read_text(encoding="utf-8"))
         active = state.get("active") if isinstance(state, dict) else None
