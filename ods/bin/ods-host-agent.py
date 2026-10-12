@@ -14310,17 +14310,27 @@ class AgentHandler(BaseHTTPRequestHandler):
                 )
             elif runtime_restart_strategy == "compose-cafe-llama":
                 _compose_stop_cafe_llama_server()
-                if _cafe_llama_runtime_selected(rollback_env):
+                if _active_model_state_backend_kind() == "cafe-llama":
                     previous_model_name = Path(str(rollback_env.get("GGUF_FILE") or "")).name
                     if not previous_model_name:
                         raise RuntimeError("Previous cafe-llama model identity is unavailable for rollback")
+                    rollback_env["CAFE_LLAMA_ENABLED"] = "true"
                     rollback_env["CAFE_LLAMA_MODEL"] = f"/models/{previous_model_name}"
                     rollback_env["_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE"] = "true"
                     _compose_restart_cafe_llama_server(rollback_env)
                 else:
                     _compose_restart_llama_server(rollback_env)
             elif runtime_restart_strategy == "compose-llama":
-                _compose_restart_llama_server(rollback_env)
+                if _active_model_state_backend_kind() == "cafe-llama":
+                    previous_model_name = Path(str(rollback_env.get("GGUF_FILE") or "")).name
+                    if not previous_model_name:
+                        raise RuntimeError("Previous cafe-llama model identity is unavailable for rollback")
+                    rollback_env["CAFE_LLAMA_ENABLED"] = "true"
+                    rollback_env["CAFE_LLAMA_MODEL"] = f"/models/{previous_model_name}"
+                    rollback_env["_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE"] = "true"
+                    _compose_restart_cafe_llama_server(rollback_env)
+                else:
+                    _compose_restart_llama_server(rollback_env)
             elif runtime_restart_strategy is not None:
                 raise RuntimeError(
                     f"Unknown model activation restart strategy: {runtime_restart_strategy}"
