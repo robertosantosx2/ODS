@@ -14324,11 +14324,13 @@ class AgentHandler(BaseHTTPRequestHandler):
                 excerpt = _failed_llama_server_log_excerpt()
             elif runtime_restart_strategy == "cafe-compose":
                 excerpt = _failed_llama_server_log_excerpt("ods-cafe-llama")
-                if excerpt:
-                    logger.warning(
-                        "Failed llama-server log excerpt for %s:\n%s", gguf_file, excerpt
-                    )
-                    captured["runtime_log_excerpt"] = excerpt
+            else:
+                excerpt = ""
+            if excerpt:
+                logger.warning(
+                    "Failed runtime log excerpt for %s:\n%s", gguf_file, excerpt
+                )
+                captured["runtime_log_excerpt"] = excerpt
             return captured
 
         def rollback_and_prove() -> tuple[bool, str]:
