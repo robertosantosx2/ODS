@@ -392,3 +392,14 @@ class FakeAdapter:
 
     def rollback(self, env: dict[str, str]) -> dict[str, Any]:
         return self._next("rollback")
+
+
+class CafeLlamaAdapter(ContainerLlamaAdapter):
+    """Opt-in cafe-llama.cpp runtime using the same fail-closed proof contract.
+
+    The host agent must inject a cafe-specific restart callback and readiness
+    probe; this adapter intentionally does not guess ports, compose paths, or
+    model identity. It cannot be used as a drop-in default for llama-server.
+    """
+
+    kind = "cafe-llama"
