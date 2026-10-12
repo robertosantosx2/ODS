@@ -68,6 +68,7 @@ def run_runtime_activation(
         "contextVerified": None,
         "capabilities": None,
         "verifiedAt": None,
+        "completionVerified": None,
     }
     for phase in PHASES:
         try:
@@ -79,14 +80,21 @@ def run_runtime_activation(
                 "detail": f"adapter raised: {exc}",
                 **proof,
             }
-        if not isinstance(outcome, dict) or "ok" not in outcome:
+        if not isinstance(outcome, dict) or not isinstance(outcome.get("ok"), bool):
             return {
                 "ok": False,
                 "phase": phase,
-                "detail": "adapter returned a non-contract result",
+                "detail": "adapter result must include a boolean ok",
                 **proof,
             }
-        if phase.startswith("verify_") and outcome.get("ok"):
+        if phase.startswith("verify_") and outcome["ok"] is True:
+            if phase == "verify_completion" and outcome.get("completionVerified") is not True:
+                return {
+                    "ok": False,
+                    "phase": phase,
+                    "detail": "completion proof does not certify a real generated completion",
+                    **proof,
+                }
             contract_error = _verification_error(outcome)
             if contract_error:
                 return {
@@ -109,15 +117,35 @@ def run_runtime_activation(
                 "contextVerified": bool(outcome["contextVerified"]),
                 "capabilities": dict(outcome["capabilities"]),
                 "verifiedAt": str(outcome["verifiedAt"]),
+                "completionVerified": outcome.get("completionVerified") is True,
             }
+            runtime_fields = (
+                "runtimeKind",
+                "runtimeBuildId",
+                "artifactSha256",
+            )
+            for field in runtime_fields:
+                if field in outcome:
+                    value = outcome[field]
+                    if not isinstance(value, str) or not value.strip():
+                        return {
+                            "ok": False,
+                            "phase": phase,
+                            "detail": f"verification returned invalid {field}",
+                            **proof,
+                        }
+                    outcome_proof[field] = value.strip()
+
             stable_fields = (
                 "identity",
                 "contextLength",
                 "contextVerified",
                 "capabilities",
+                "completionVerified",
+                *runtime_fields,
             )
             if phase == "verify_completion" and any(
-                outcome_proof[field] != proof[field] for field in stable_fields
+                outcome_proof.get(field) != proof.get(field) for field in stable_fields
             ):
                 return {
                     "ok": False,
@@ -126,7 +154,7 @@ def run_runtime_activation(
                     **proof,
                 }
             proof = outcome_proof
-        if not outcome.get("ok"):
+        if outcome["ok"] is not True:
             return {
                 "ok": False,
                 "phase": phase,
