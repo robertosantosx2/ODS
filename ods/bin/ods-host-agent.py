@@ -14285,7 +14285,15 @@ class AgentHandler(BaseHTTPRequestHandler):
 
         def restore_previous_runtime():
             rollback_env = previous_runtime_env()
-            if runtime_restart_strategy == "wsl-native-llama":
+            previous_cafe_active = (
+                str(rollback_env.get("CAFE_LLAMA_ACTIVE") or "").strip().lower()
+                in {"1", "true", "yes", "on"}
+            )
+            if previous_cafe_active:
+                _compose_restart_cafe_llama(rollback_env)
+            elif runtime_restart_strategy == "cafe-compose":
+                _compose_restart_llama_server(rollback_env)
+            elif runtime_restart_strategy == "wsl-native-llama":
                 if wsl_changed_digest is None:
                     # No response proved which plan was written. A read may
                     # confirm an unchanged plan, but never adopt a new CAS token.
