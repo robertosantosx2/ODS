@@ -46,22 +46,31 @@ benchmark
 MEASURED configuration_id
 ```
 
-## Enable (`ods enable cafe-llama`)
+## Enable and select the runtime
+
+Installing the extension does not switch the active inference engine. Runtime selection is an explicit opt-in.
 
 ```bash
 # From the ODS install tree:
-cp -r extensions/library/services/cafe-llama extensions/services/cafe-llama
 ods enable cafe-llama
-ods start cafe-llama
 ```
+
+Then set these values in the ODS `.env` before activating a model:
+
+```dotenv
+CAFE_LLAMA_ENABLED=true
+EXT_CAFE_LLAMA_PORT=8081
+```
+
+On model activation, the host agent selects cafe-llama only when the opt-in is true. The initial activation path supports **native Linux + NVIDIA**; other platforms/backends fail closed instead of silently falling back. When the opt-in is false or unset, the existing `llama-server` path remains unchanged.
 
 Library recipe: `extensions/library/services/cafe-llama/`
 
 1. The image downloads a prebuilt binary by default (0.75 Linux CUDA x64).
-2. Set `CAFE_LLAMA_MODEL` to a GGUF/safetensors path under the models volume.
+2. The host agent derives `CAFE_LLAMA_MODEL=/models/<selected-file>` from the model being activated.
 3. Optional advanced flags via `.env` / Dashboard (see below).
 
-Default listen: host port **8081** (`EXT_CAFE_LLAMA_PORT`).
+The service binds to host port **8081** by default (`EXT_CAFE_LLAMA_PORT`) and is attached to `ods-network` for model-router traffic. It does not replace or recreate `ods-llama-server`.
 
 ## Dashboard / `.env` keys
 
