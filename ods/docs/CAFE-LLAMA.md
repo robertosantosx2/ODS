@@ -46,22 +46,37 @@ benchmark
 MEASURED configuration_id
 ```
 
-## Enable (`ods enable cafe-llama`)
+## Enable (explicit opt-in)
 
-```bash
-# From the ODS install tree:
-cp -r extensions/library/services/cafe-llama extensions/services/cafe-llama
-ods enable cafe-llama
-ods start cafe-llama
-```
+Install the curated service recipe at `extensions/services/cafe-llama` first
+(using the ODS extension installation path, or copying it from
+`extensions/library/services/cafe-llama/`). This change does not add an
+`ods enable` or `ods start` CLI command.
+
+Set `CAFE_LLAMA_ENABLED=true` only when you want model-activation requests to
+select cafe-llama. The host agent currently supports host-native Linux with
+NVIDIA, or CPU when a compatible `CAFE_LLAMA_RELEASE_URL` is configured.
+WSL-managed, agent-in-container, macOS, and AMD configurations fail closed.
+The regular `llama-server` remains the default when the flag is false.
+
+During model activation the agent maps the selected GGUF into `/models`, stops
+the competing `llama-server` process to avoid double VRAM use, starts cafe,
+and requires all of the following before publishing its route:
+
+1. `/health` returns a healthy response.
+2. `/v1/models` reports the requested model identity.
+3. `/props` proves a valid context for the selected model.
+4. A real chat completion returns visible content from that model.
+
+The route is published as `cafe-llama-default` only after those checks pass.
+If staging or verification fails, ODS restores the previously active backend,
+model configuration, and route. The integration still needs a real host-side
+end-to-end activation/rollback run before it can be considered hardware-validated.
 
 Library recipe: `extensions/library/services/cafe-llama/`
 
-1. The image downloads a prebuilt binary by default (0.75 Linux CUDA x64).
-2. Set `CAFE_LLAMA_MODEL` to a GGUF/safetensors path under the models volume.
-3. Optional advanced flags via `.env` / Dashboard (see below).
-
-Default listen: host port **8081** (`EXT_CAFE_LLAMA_PORT`).
+The image defaults to the 0.75 Linux x64 CUDA 12.4 release. CPU-only use requires
+a compatible release archive configured through `CAFE_LLAMA_RELEASE_URL`.
 
 ## Dashboard / `.env` keys
 
