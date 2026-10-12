@@ -109,6 +109,9 @@ class ContainerLlamaAdapter:
         self._completion_verified = False
 
     def _verification_result(self, detail: str) -> dict[str, Any]:
+        extras: dict[str, Any] = {}
+        if self.kind != "llama-server":
+            extras["runtimeKind"] = self.kind
         return result(
             True,
             detail,
@@ -118,6 +121,7 @@ class ContainerLlamaAdapter:
             capabilities=dict(self._capabilities),
             verifiedAt=self._verified_at,
             completionVerified=self._completion_verified,
+            **extras,
         )
 
     def stage(self, env: dict[str, str]) -> dict[str, Any]:
@@ -203,6 +207,17 @@ class ContainerLlamaAdapter:
 
     def rollback(self, env: dict[str, str]) -> dict[str, Any]:
         return self._optional_operation("rollback", self._rollback, env)
+
+
+class CafeLlamaAdapter(ContainerLlamaAdapter):
+    """Opt-in cafe-llama.cpp runtime using the same strict readiness contract.
+
+    The host agent must explicitly select this adapter and inject the cafe
+    restart/readiness route. It is never selected by the default llama-server
+    path.
+    """
+
+    kind = "cafe-llama"
 
 
 class NativeLlamaAdapter(ContainerLlamaAdapter):
