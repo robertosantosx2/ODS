@@ -20170,8 +20170,13 @@ def _compose_restart_cafe_llama(env: dict):
         raise RuntimeError("cafe-llama requires CAFE_LLAMA_MODEL under /models")
     if str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower() not in {"1", "true", "yes", "on"}:
         raise RuntimeError("cafe-llama activation requires explicit CAFE_LLAMA_ENABLED opt-in")
+    nvidia_overlay = compose_file.with_name("compose.nvidia.yaml")
+    if not nvidia_overlay.is_file():
+        raise RuntimeError("cafe-llama NVIDIA Compose overlay is missing")
     argv = [
-        "docker", "compose", "-f", str(compose_file),
+        "docker", "compose",
+        "-f", str(compose_file),
+        "-f", str(nvidia_overlay),
         "up", "-d", "--build", "--force-recreate", "cafe-llama",
     ]
     result = subprocess.run(
