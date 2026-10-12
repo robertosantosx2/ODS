@@ -131,6 +131,12 @@ class ContainerLlamaAdapter:
         return result(True, "compose restart issued")
 
     def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        # Clear prior proof so a failed retry cannot reuse an earlier generation.
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
         # Readiness in the container path proves identity and serving state
         # in one bounded wait, mirroring the pre-adapter inline behavior.
         try:
