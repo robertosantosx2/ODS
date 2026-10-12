@@ -101,7 +101,12 @@ def test_cafe_llama_route_is_accepted_by_model_state(tmp_path):
         backend_kind="cafe-llama",
         endpoint_id="cafe-llama-default",
         context_length=4096,
-        capabilities={"chat": True, "tools": False, "vision": False, "agentViable": False},
+        capabilities={
+            "chat": True,
+            "tools": False,
+            "vision": False,
+            "agentViable": False,
+        },
         proof_identity="/models/test.gguf",
         proof_completion=True,
     )
