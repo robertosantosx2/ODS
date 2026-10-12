@@ -167,11 +167,44 @@ class ContainerLlamaAdapter:
         )
 
     def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
-        # _wait_for_model_readiness returns an identity only after a meaningful
-        # completion reports the same concrete model. Do not echo configuration.
+        # Perform a second bounded readiness probe so this phase cannot merely
+        # replay identity-phase state. The injected probe must exercise a real
+        # completion and return runtime-reported identity/context evidence only
+        # after generation succeeds; health or configuration echoes are not proof.
         if not self._verified_identity:
             return result(False, "completion proof has no runtime identity")
-        return self._verification_result("completion proven during readiness wait")
+        try:
+            runtime_proof = self._wait_ready(
+                env,
+                self._expected_gguf,
+                self._context_length,
+                lemonade_model_id=self._lemonade_model_id,
+            )
+        except Exception as exc:
+            return result(False, f"completion probe failed: {exc}")
+        if not isinstance(runtime_proof, dict):
+            return result(False, "completion probe returned no proof record")
+        identity = runtime_proof.get("identity")
+        context = runtime_proof.get("contextLength")
+        context_verified = runtime_proof.get("contextVerified")
+        verified_at = runtime_proof.get("verifiedAt")
+        if not isinstance(identity, str) or not identity.strip():
+            return result(False, "completion probe returned no runtime identity")
+        if identity.strip() != self._verified_identity:
+            return result(False, "completion probe runtime identity changed")
+        if (
+            not isinstance(context, int)
+            or isinstance(context, bool)
+            or context <= 0
+            or context != self._verified_context
+        ):
+            return result(False, "completion probe context does not match identity proof")
+        if not isinstance(context_verified, bool) or context_verified != self._context_verified:
+            return result(False, "completion probe context status does not match identity proof")
+        if not isinstance(verified_at, str) or not verified_at.strip():
+            return result(False, "completion probe has no proof timestamp")
+        self._verified_at = verified_at.strip()
+        return self._verification_result("fresh runtime completion probe succeeded")
 
     def publish_native_alias(self, env: dict[str, str]) -> dict[str, Any]:
         return result(True, "native alias not required for llama.cpp")
