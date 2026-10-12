@@ -14759,6 +14759,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                     str(env_pre.get("CAFE_LLAMA_ENABLED") or "").strip().lower()
                     in {"1", "true", "yes", "on"}
                 )
+                updates["CAFE_LLAMA_ACTIVE"] = "true" if cafe_enabled_pre else "false"
                 if cafe_enabled_pre:
                     updates["CAFE_LLAMA_MODEL"] = f"/models/{Path(gguf_file).name}"
                 if gpu_assignment_plan:
