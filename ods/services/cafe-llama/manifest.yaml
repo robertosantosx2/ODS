@@ -101,4 +101,4 @@ evidence:
 
 enable:
   cli: "ods enable cafe-llama"
-  notes: Not wired in installer yet — scaffold only
+  notes: Install the curated cafe-llama service first, then opt in with CAFE_LLAMA_ENABLED=true. Runtime activation is proof-gated and limited to host-native Linux NVIDIA or explicitly configured CPU builds; llama-server remains the default.
