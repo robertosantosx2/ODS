@@ -3909,12 +3909,21 @@ def _publish_activation_route(env: dict, model_id: str, proof: dict, capabilitie
             or proof["contextLength"] <= 0):
         raise RuntimeError("Cannot publish an unverified model-router target")
     lemonade = str(env.get("LEMONADE_MODEL") or "") if _uses_lemonade_runtime(env) else ""
+    runtime_kind = str(proof.get("runtimeKind") or "")
+    if runtime_kind == "cafe-llama":
+        backend_kind = "cafe-llama"
+        endpoint_id = "cafe-llama-default"
+        native_route = None
+    else:
+        backend_kind = "lemonade" if lemonade else "llama-server"
+        endpoint_id = "lemonade-default" if lemonade else "llama-server-default"
+        native_route = lemonade or None
     return _switchboard_state.record_verified_route(
         INSTALL_DIR / "data" / "model-state.json", catalog_id=str(model_id),
         runtime_model_id=proof["identity"], proof_identity=proof["identity"],
-        backend_kind="lemonade" if lemonade else "llama-server",
-        endpoint_id="lemonade-default" if lemonade else "llama-server-default",
-        native_route=lemonade or None, context_length=proof["contextLength"],
+        backend_kind=backend_kind,
+        endpoint_id=endpoint_id,
+        native_route=native_route, context_length=proof["contextLength"],
         capabilities=capabilities,
     )
 
