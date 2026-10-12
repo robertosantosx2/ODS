@@ -77,6 +77,7 @@ The service binds to host port **8081** by default (`EXT_CAFE_LLAMA_PORT`) and i
 | Key | Purpose |
 |-----|---------|
 | `CAFE_LLAMA_ENABLED` | Opt-in marker (does not change `LLM_BACKEND`) |
+| `CAFE_LLAMA_ACTIVE` | Host-agent-managed active runtime state; do not edit manually |
 | `CAFE_LLAMA_HOST` / `EXT_CAFE_LLAMA_PORT` | Bind / publish |
 | `CAFE_LLAMA_MODEL` | Model path |
 | `CAFE_LLAMA_EXTRA_ARGS` | Raw extra CLI flags |
