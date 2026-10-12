@@ -20173,8 +20173,12 @@ def _compose_restart_cafe_llama(env: dict):
     nvidia_overlay = compose_file.with_name("compose.nvidia.yaml")
     if not nvidia_overlay.is_file():
         raise RuntimeError("cafe-llama NVIDIA Compose overlay is missing")
+    env_file = INSTALL_DIR / ".env"
+    if not env_file.is_file():
+        raise RuntimeError("ODS .env is missing; refusing to start cafe-llama without explicit configuration")
     argv = [
         "docker", "compose",
+        "--env-file", str(env_file),
         "-f", str(compose_file),
         "-f", str(nvidia_overlay),
         "up", "-d", "--build", "--force-recreate", "cafe-llama",
