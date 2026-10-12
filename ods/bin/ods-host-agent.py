@@ -14932,6 +14932,13 @@ class AgentHandler(BaseHTTPRequestHandler):
                     raise RuntimeError(
                         "CAFE_LLAMA_ENABLED currently supports native Linux with NVIDIA only"
                     )
+                model_store_root = (INSTALL_DIR / "data" / "models").resolve()
+                try:
+                    target.resolve().relative_to(model_store_root)
+                except (OSError, ValueError):
+                    raise RuntimeError(
+                        "cafe-llama currently requires the selected model file under ODS data/models"
+                    ) from None
                 runtime_restart_strategy = "cafe-compose"
                 if _switchboard_adapters is not None:
                     switchboard_adapter = _switchboard_adapters.CafeLlamaAdapter(
