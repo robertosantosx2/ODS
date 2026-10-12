@@ -14909,16 +14909,23 @@ class AgentHandler(BaseHTTPRequestHandler):
             if cafe_requested:
                 if str(env.get("ODS_MODE") or "local").strip().lower() != "local":
                     raise RuntimeError("cafe-llama activation is supported only in ODS_MODE=local")
+                cafe_backend = str(env.get("GPU_BACKEND") or "nvidia").strip().lower()
                 if (
-                    _in_container
+                    platform.system().lower() != "linux"
+                    or _in_container
                     or wsl_managed.get("managed") is True
                     or windows_host_lemonade
                     or windows_native_llama
-                    or gpu_backend == "apple"
+                    or cafe_backend not in {"nvidia", "cpu"}
                     or _uses_lemonade_runtime(env)
                 ):
                     raise RuntimeError(
-                        "cafe-llama activation currently requires the host-native Linux Compose agent"
+                        "cafe-llama activation currently requires a host-native Linux "
+                        "Compose agent with NVIDIA or explicitly configured CPU builds"
+                    )
+                if cafe_backend == "cpu" and not str(env.get("CAFE_LLAMA_RELEASE_URL") or "").strip():
+                    raise RuntimeError(
+                        "CPU cafe-llama requires CAFE_LLAMA_RELEASE_URL to select a CPU-compatible build"
                     )
                 if _switchboard_adapters is None or not hasattr(_switchboard_adapters, "CafeLlamaAdapter"):
                     raise RuntimeError("cafe-llama adapter is unavailable; refusing unverified activation")
