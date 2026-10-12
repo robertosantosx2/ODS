@@ -7432,6 +7432,85 @@
       "configuration_scope": "declared-environment-keys"
     },
     {
+      "id": "cafe-llama",
+      "name": "cafe-llama (advanced llama.cpp)",
+      "description": "Optional advanced llama.cpp runtime for MoE host/CPU/SSD offload, Turbo KV, and MTP. Does not replace core llama-server.",
+      "category": "optional",
+      "gpu_backends": [
+        "amd",
+        "nvidia",
+        "apple",
+        "cpu"
+      ],
+      "compose_file": "compose.yaml",
+      "depends_on": [],
+      "port": 8081,
+      "external_port_default": 8081,
+      "health_endpoint": "/health",
+      "env_vars": [
+        {
+          "key": "CAFE_LLAMA_ENABLED",
+          "required": false,
+          "default": "false",
+          "description": "Opt-in marker; does not change LLM_BACKEND."
+        },
+        {
+          "key": "CAFE_LLAMA_MODEL",
+          "required": false,
+          "default": "",
+          "description": "GGUF model path mounted into the container."
+        },
+        {
+          "key": "CAFE_LLAMA_EXTRA_ARGS",
+          "required": false,
+          "default": "",
+          "description": "Extra advanced cafe-llama CLI flags."
+        },
+        {
+          "key": "EXT_CAFE_LLAMA_PORT",
+          "required": false,
+          "default": "8081",
+          "description": "Host port for the optional runtime API."
+        }
+      ],
+      "tags": [
+        "llama.cpp",
+        "inference",
+        "optional"
+      ],
+      "features": [
+        {
+          "id": "cafe-llama-advanced-runtime",
+          "name": "cafe-llama Advanced Runtime",
+          "description": "Optional MoE / Turbo KV / MTP runtime alongside core llama-server",
+          "icon": "Cpu",
+          "category": "ai",
+          "requirements": {
+            "services": [
+              "cafe-llama"
+            ],
+            "vram_gb": 0
+          },
+          "enabled_services_all": [
+            "cafe-llama"
+          ],
+          "setup_time": "~3 minutes",
+          "priority": 12,
+          "launch": {
+            "type": "none"
+          },
+          "gpu_backends": [
+            "amd",
+            "nvidia",
+            "apple",
+            "cpu"
+          ]
+        }
+      ],
+      "catalog_source": "library",
+      "configuration_scope": "declared-environment-keys"
+    },
+    {
       "id": "ollama",
       "name": "Ollama",
       "description": "Pull-and-run server for open-source large language models with simple model management.",
