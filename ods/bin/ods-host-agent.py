@@ -14864,7 +14864,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                 # Windows server and proved the new one, so no stale runtime
                 # can answer an early probe. The other native runtimes keep
                 # the original fixed-delay cadence.
-                if runtime_restart_strategy in {"compose-llama", "container-llama", "windows-native-llama"}:
+                if runtime_restart_strategy in {"compose-llama", "compose-cafe-llama", "container-llama", "windows-native-llama"}:
                     return {"fast_poll_seconds": _MODEL_READINESS_FAST_POLL_SECONDS}
                 return {}
 
@@ -15107,6 +15107,8 @@ class AgentHandler(BaseHTTPRequestHandler):
                     gguf_file=gguf_file,
                     context_length=int(context_length),
                 )
+                if _cafe_llama_enabled(env):
+                    _ensure_cafe_router_endpoint(INSTALL_DIR)
 
                 if _normal_switchboard_mode(env) == "enabled":
                     route_proof = switchboard_run or _wait_for_model_readiness(
@@ -17181,6 +17183,34 @@ def _runtime_api_key_env(env: dict) -> str:
 
 def _litellm_render_key(env: dict) -> str:
     return str(env.get("LITELLM_KEY") or env.get("LITELLM_MASTER_KEY") or "")
+
+
+def _ensure_cafe_router_endpoint(install_dir: Path) -> None:
+    """Keep the default llama endpoint intact and add the verified cafe endpoint."""
+    path = install_dir / "config" / "model-router" / "endpoints.json"
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Cannot verify model-router endpoints before cafe publication: {exc}") from exc
+    endpoints = document.get("endpoints") if isinstance(document, dict) else None
+    if not isinstance(endpoints, list):
+        raise RuntimeError("Model-router endpoint document has no endpoints list")
+    default_found = False
+    cafe_found = False
+    for endpoint in endpoints:
+        if not isinstance(endpoint, dict):
+            continue
+        if endpoint.get("id") == "llama-server-default":
+            endpoint["baseUrl"] = "http://llama-server:8080"
+            default_found = True
+        elif endpoint.get("id") == "cafe-llama-default":
+            endpoint["baseUrl"] = "http://cafe-llama:8081"
+            cafe_found = True
+    if not default_found:
+        endpoints.append({"id": "llama-server-default", "baseUrl": "http://llama-server:8080"})
+    if not cafe_found:
+        endpoints.append({"id": "cafe-llama-default", "baseUrl": "http://cafe-llama:8081"})
+    _atomic_write_json(path, document)
 
 
 def _render_model_router_runtime_configs(
