@@ -14755,7 +14755,11 @@ class AgentHandler(BaseHTTPRequestHandler):
                     "MODEL_RUNTIME_PROFILE_SOURCE": runtime_profile.get("source_url", "") if runtime_profile else "",
                     "MODEL_SELECTION_SOURCE": "dashboard",
                 }
-                if str(env_pre.get("CAFE_LLAMA_ENABLED") or "").strip().lower() in {"1", "true", "yes", "on"}:
+                cafe_enabled_pre = (
+                    str(env_pre.get("CAFE_LLAMA_ENABLED") or "").strip().lower()
+                    in {"1", "true", "yes", "on"}
+                )
+                if cafe_enabled_pre:
                     updates["CAFE_LLAMA_MODEL"] = f"/models/{Path(gguf_file).name}"
                 if gpu_assignment_plan:
                     updates.update(gpu_assignment_plan["env_updates"])
