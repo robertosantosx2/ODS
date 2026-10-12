@@ -4397,8 +4397,14 @@ def _publish_activation_route(env: dict, model_id: str, proof: dict, capabilitie
         raise RuntimeError("Cannot publish an unverified model-router target")
     runtime_kind = str(proof.get("runtimeKind") or "llama-server")
     if runtime_kind not in {"llama-server", "cafe-llama"}:
-        raise RuntimeError(f"Refusing to publish unsupported runtime kind: {runtime_kind}")
-    endpoint_id = "cafe-llama-default" if runtime_kind == "cafe-llama" else "llama-server-default"
+        raise RuntimeError(
+            f"Refusing to publish unsupported runtime kind: {runtime_kind}"
+        )
+    endpoint_id = (
+        "cafe-llama-default"
+        if runtime_kind == "cafe-llama"
+        else "llama-server-default"
+    )
     return _switchboard_state.record_verified_route(
         INSTALL_DIR / "data" / "model-state.json", catalog_id=str(model_id),
         runtime_model_id=proof["identity"], proof_identity=proof["identity"],
