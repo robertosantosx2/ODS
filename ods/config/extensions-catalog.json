@@ -939,9 +939,7 @@
       "description": "Optional advanced llama.cpp runtime (MoE host/CPU/SSD offload, Turbo KV, MTP). Does not replace core llama-server.",
       "category": "optional",
       "gpu_backends": [
-        "amd",
         "nvidia",
-        "apple",
         "cpu"
       ],
       "compose_file": "compose.yaml",
@@ -1055,9 +1053,7 @@
           "setup_time": "~3 minutes",
           "priority": 12,
           "gpu_backends": [
-            "amd",
             "nvidia",
-            "apple",
             "cpu"
           ],
           "launch": {
