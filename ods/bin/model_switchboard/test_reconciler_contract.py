@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ods.bin.model_switchboard.adapters import ContainerLlamaAdapter
+from ods.bin.model_switchboard.adapters import CafeLlamaAdapter, ContainerLlamaAdapter
 from ods.bin.model_switchboard.reconciler import run_runtime_activation
 
 
@@ -89,3 +89,16 @@ def test_reconciler_rejects_completion_without_real_generation_evidence():
     assert result["ok"] is False
     assert result["phase"] == "verify_completion"
     assert "real generated completion" in result["detail"]
+
+
+def test_cafe_adapter_kind_is_explicit_and_proof_uses_adapter_kind():
+    adapter = CafeLlamaAdapter(
+        restart=lambda env: None,
+        wait_ready=lambda env, gguf, ctx, lemonade_model_id="": dict(PROOF),
+        expected_gguf="test.gguf",
+        context_length=4096,
+    )
+    assert adapter.kind == "cafe-llama"
+    result = run_runtime_activation(adapter, {})
+    assert result["ok"] is True
+    assert result["runtimeKind"] == "cafe-llama"
