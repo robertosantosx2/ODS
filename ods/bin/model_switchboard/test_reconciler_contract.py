@@ -19,6 +19,7 @@ PROOF = {
         "agentViable": False,
     },
     "verifiedAt": datetime.now(timezone.utc).isoformat(),
+    "completionVerified": True,
 }
 
 
@@ -59,7 +60,7 @@ def test_reconciler_accepts_only_boolean_true():
     assert adapter.calls == ["stage", "verify_identity", "verify_completion"]
 
 
-def test_completion_phase_performs_a_fresh_probe():
+def test_completion_phase_publishes_real_probe_evidence_without_restarting_readiness():
     calls = []
 
     def wait_ready(env, gguf_file, context_length, *, lemonade_model_id=""):
@@ -77,26 +78,14 @@ def test_completion_phase_performs_a_fresh_probe():
 
     assert identity["ok"] is True
     assert completion["ok"] is True
-    assert len(calls) == 2
-    assert completion["detail"] == "fresh runtime completion probe succeeded"
+    assert len(calls) == 1
+    assert completion["completionVerified"] is True
+    assert completion["detail"] == "real runtime completion proven"
 
 
-def test_completion_probe_fails_if_runtime_identity_changes():
-    calls = 0
-
-    def wait_ready(env, gguf_file, context_length, *, lemonade_model_id=""):
-        nonlocal calls
-        calls += 1
-        identity = "/models/test.gguf" if calls == 1 else "/models/other.gguf"
-        return {**PROOF, "identity": identity}
-
-    adapter = ContainerLlamaAdapter(
-        restart=lambda env: None,
-        wait_ready=wait_ready,
-        expected_gguf="/models/test.gguf",
-        context_length=4096,
-    )
-    assert adapter.verify_identity({})["ok"] is True
-    result = adapter.verify_completion({})
+def test_reconciler_rejects_completion_without_real_generation_evidence():
+    adapter = PlannedAdapter({"verify_completion": { "ok": True, **{k: v for k, v in PROOF.items() if k != "completionVerified"} }})
+    result = run_runtime_activation(adapter, {})
     assert result["ok"] is False
-    assert "identity changed" in result["detail"]
+    assert result["phase"] == "verify_completion"
+    assert "real generated completion" in result["detail"]
