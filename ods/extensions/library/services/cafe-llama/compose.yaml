@@ -36,14 +36,6 @@ services:
       - LLAMA_ARG_PIPELINE_PARALLEL=${LLAMA_ARG_PIPELINE_PARALLEL:-}
       - LLAMA_ARG_NO_NGRAM=${LLAMA_ARG_NO_NGRAM:-}
       - LLAMA_ARG_NGRAM_SSD=${LLAMA_ARG_NGRAM_SSD:-}
-    # Optional NVIDIA GPU passthrough (ignored on non-NVIDIA hosts)
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/health >/dev/null || exit 1"]
       interval: 30s
