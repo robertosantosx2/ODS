@@ -125,8 +125,12 @@ def run_runtime_activation(
                 "artifactSha256",
             )
             for field in runtime_fields:
-                if field in outcome:
-                    value = outcome[field]
+                # The adapter implementation is authoritative for runtime kind;
+                # adapters may additionally provide a concrete build/artifact proof.
+                value = outcome.get(field)
+                if field == "runtimeKind" and not value:
+                    value = getattr(adapter, "kind", "")
+                if value is not None:
                     if not isinstance(value, str) or not value.strip():
                         return {
                             "ok": False,
