@@ -106,6 +106,7 @@ class ContainerLlamaAdapter:
         self._verified_context = 0
         self._context_verified = False
         self._verified_at = ""
+        self._completion_verified = False
 
     def _verification_result(self, detail: str) -> dict[str, Any]:
         return result(
@@ -116,6 +117,7 @@ class ContainerLlamaAdapter:
             contextVerified=self._context_verified,
             capabilities=dict(self._capabilities),
             verifiedAt=self._verified_at,
+            completionVerified=self._completion_verified,
         )
 
     def stage(self, env: dict[str, str]) -> dict[str, Any]:
@@ -126,6 +128,11 @@ class ContainerLlamaAdapter:
         return result(True, "compose restart issued")
 
     def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
         # Readiness in the container path proves identity and serving state
         # in one bounded wait, mirroring the pre-adapter inline behavior.
         try:
@@ -158,6 +165,8 @@ class ContainerLlamaAdapter:
         self._verified_context = runtime_context
         self._context_verified = context_verified
         self._verified_at = verified_at.strip()
+        # _wait_for_model_readiness only returns after a real chat completion.
+        self._completion_verified = True
         return self._verification_result(
             "runtime reports staged model and completed proof request"
         )
@@ -165,8 +174,8 @@ class ContainerLlamaAdapter:
     def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
         # _wait_for_model_readiness returns an identity only after a meaningful
         # completion reports the same concrete model. Do not echo configuration.
-        if not self._verified_identity:
-            return result(False, "completion proof has no runtime identity")
+        if not self._verified_identity or not self._completion_verified:
+            return result(False, "no successful real completion proof is available")
         return self._verification_result("completion proven during readiness wait")
 
     def publish_native_alias(self, env: dict[str, str]) -> dict[str, Any]:
@@ -205,6 +214,137 @@ class NativeLlamaAdapter(ContainerLlamaAdapter):
     """
 
     kind = "llama-server"
+
+
+class LemonadeAdapter:
+    """Deterministic Lemonade concrete-ID runtime (PR 2C).
+
+    The shared container restart and the post-restart model-ID resolution
+    run inline in the host agent (resolution requires a live server), so
+    this adapter's ``stage`` is a proven no-op and verification drives the
+    Lemonade-aware readiness wait. Native virtual ``collection.router``
+    registration is PR 6, not here.
+    """
+
+    kind = "lemonade"
+
+    def __init__(
+        self,
+        *,
+        wait_ready: ReadinessProbe,
+        expected_gguf: str,
+        context_length: int,
+        lemonade_model_id: str,
+        capabilities: dict[str, bool] | None = None,
+        unload: Callable[[dict[str, str]], None] | None = None,
+        delete: Callable[[dict[str, str]], None] | None = None,
+        rollback: Callable[[dict[str, str]], None] | None = None,
+    ) -> None:
+        self._wait_ready = wait_ready
+        self._expected_gguf = expected_gguf
+        self._context_length = int(context_length)
+        self._lemonade_model_id = lemonade_model_id
+        supplied_capabilities = capabilities or {}
+        self._capabilities = {
+            "chat": bool(supplied_capabilities.get("chat", True)),
+            "tools": bool(supplied_capabilities.get("tools", False)),
+            "vision": bool(supplied_capabilities.get("vision", False)),
+            "agentViable": bool(supplied_capabilities.get("agentViable", False)),
+        }
+        self._unload = unload
+        self._delete = delete
+        self._rollback = rollback
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
+
+    def _verification_result(self, detail: str) -> dict[str, Any]:
+        return result(
+            True,
+            detail,
+            identity=self._verified_identity,
+            contextLength=self._verified_context,
+            contextVerified=self._context_verified,
+            capabilities=dict(self._capabilities),
+            verifiedAt=self._verified_at,
+            completionVerified=self._completion_verified,
+        )
+
+    def stage(self, env: dict[str, str]) -> dict[str, Any]:
+        # Restart + model-ID resolution already completed inline before the
+        # reconciler runs; failure there raised before reaching this adapter.
+        if not self._lemonade_model_id:
+            return result(False, "no resolved Lemonade model id")
+        return result(True, "lemonade runtime staged inline")
+
+    def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        # A failed retry must not reuse a prior completion proof.
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
+        try:
+            runtime_proof = self._wait_ready(
+                env,
+                self._expected_gguf,
+                self._context_length,
+                lemonade_model_id=self._lemonade_model_id,
+            )
+        except Exception as exc:
+            return result(False, f"lemonade readiness wait failed: {exc}")
+        if not isinstance(runtime_proof, dict):
+            return result(False, "lemonade runtime did not return a proof record")
+        runtime_identity = runtime_proof.get("identity")
+        runtime_context = runtime_proof.get("contextLength")
+        context_verified = runtime_proof.get("contextVerified")
+        verified_at = runtime_proof.get("verifiedAt")
+        if not isinstance(runtime_identity, str) or not runtime_identity.strip():
+            return result(False, "lemonade runtime did not report the staged model")
+        if (
+            not isinstance(runtime_context, int)
+            or isinstance(runtime_context, bool)
+            or runtime_context <= 0
+        ):
+            return result(False, "lemonade runtime did not report a valid context length")
+        if not isinstance(context_verified, bool):
+            return result(
+                False, "lemonade runtime proof has no context-verification status"
+            )
+        if not isinstance(verified_at, str) or not verified_at.strip():
+            return result(False, "lemonade runtime proof has no timestamp")
+        self._verified_identity = runtime_identity.strip()
+        self._verified_context = runtime_context
+        self._context_verified = context_verified
+        self._verified_at = verified_at.strip()
+        # The readiness helper returns only after a real chat completion.
+        self._completion_verified = True
+        return self._verification_result("lemonade identity and real completion proven")
+
+    def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
+        if not self._verified_identity or not self._completion_verified:
+            return result(False, "no successful real completion proof is available")
+        return self._verification_result(
+            "completion proven during lemonade readiness wait"
+        )
+
+    def publish_native_alias(self, env: dict[str, str]) -> dict[str, Any]:
+        return result(True, "native Lemonade alias is deferred to the route adapter")
+
+    def unload(self, env: dict[str, str]) -> dict[str, Any]:
+        return ContainerLlamaAdapter._optional_operation("unload", self._unload, env)
+
+    def delete(self, env: dict[str, str]) -> dict[str, Any]:
+        return ContainerLlamaAdapter._optional_operation("delete", self._delete, env)
+
+    def rollback(self, env: dict[str, str]) -> dict[str, Any]:
+        return ContainerLlamaAdapter._optional_operation(
+            "rollback", self._rollback, env
+        )
+
+
 
 
 class FakeAdapter:
