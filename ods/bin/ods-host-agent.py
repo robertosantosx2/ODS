@@ -15747,6 +15747,17 @@ def _cafe_llama_enabled(env: dict) -> bool:
     return str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower() == "true"
 
 
+def _active_model_state_backend_kind() -> str:
+    """Return the backend recorded by the last verified model-state route."""
+    try:
+        state = json.loads((INSTALL_DIR / "data" / "model-state.json").read_text(encoding="utf-8"))
+        active = state.get("active") if isinstance(state, dict) else None
+        backend = active.get("backend") if isinstance(active, dict) else None
+        return str(backend.get("kind") or "") if isinstance(backend, dict) else ""
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return ""
+
+
 def _cafe_llama_runtime_selected(env: dict) -> bool:
     """Use cafe only for the in-flight candidate or a previously verified route."""
     if not _cafe_llama_enabled(env):
@@ -20263,6 +20274,19 @@ def _compose_restart_cafe_llama_server(env: dict):
     if not 1 <= port <= 65535:
         raise RuntimeError("EXT_CAFE_LLAMA_PORT must be between 1 and 65535")
 
+    compose_flags = resolve_compose_flags()
+    if not compose_flags:
+        raise RuntimeError("Cannot safely switch to cafe-llama without the managed Compose stack flags")
+    stop_result = subprocess.run(
+        ["docker", "compose"] + compose_flags + ["stop", "llama-server"],
+        cwd=str(INSTALL_DIR), capture_output=True, text=True, timeout=120,
+    )
+    if stop_result.returncode != 0:
+        raise RuntimeError(
+            "Could not stop llama-server before cafe-llama activation: "
+            + (stop_result.stderr or stop_result.stdout or "").strip()[:400]
+        )
+
     compose_env = os.environ.copy()
     compose_env["CAFE_LLAMA_ENABLED"] = "true"
     compose_env["CAFE_LLAMA_MODEL"] = f"/models/{model_name}"
@@ -20322,6 +20346,8 @@ def _compose_restart_llama_server(env: dict):
     surface the error immediately instead of waiting for the health-check loop.
     """
     gpu_backend = env.get("GPU_BACKEND", "nvidia")
+    if _active_model_state_backend_kind() == "cafe-llama":
+        _compose_stop_cafe_llama_server()
     compose_flags = resolve_compose_flags()
 
     def _run(argv, timeout):
