@@ -15734,8 +15734,8 @@ def _runtime_endpoint(env: dict) -> tuple[str, str]:
     """
     if _runtime_uses_router_transport(env):
         return _native_llm_container_origin(env), "router"
-    cafe_enabled = str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower()
-    if cafe_enabled in {"1", "true", "yes", "on"}:
+    cafe_active = str(env.get("CAFE_LLAMA_ACTIVE") or "").strip().lower()
+    if cafe_active in {"1", "true", "yes", "on"}:
         port = str(env.get("EXT_CAFE_LLAMA_PORT") or "8081")
         return f"http://127.0.0.1:{port}", "direct"
     if _is_windows_host_llama_server(env):
