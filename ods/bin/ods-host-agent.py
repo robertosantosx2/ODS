@@ -14290,7 +14290,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                 in {"1", "true", "yes", "on"}
             )
             if previous_cafe_active:
-                _compose_restart_cafe_llama(rollback_env)
+                _compose_restart_cafe_llama(rollback_env, allow_disabled=True)
             elif runtime_restart_strategy == "cafe-compose":
                 _compose_restart_llama_server(rollback_env)
             elif runtime_restart_strategy == "wsl-native-llama":
@@ -20176,15 +20176,19 @@ def _failed_llama_server_log_excerpt(container: str = "ods-llama-server") -> str
         return ""
 
 
-def _compose_restart_cafe_llama(env: dict):
-    """Start the explicitly opted-in cafe runtime without mutating llama-server."""
+def _compose_restart_cafe_llama(env: dict, *, allow_disabled: bool = False):
+    """Start cafe-llama without mutating llama-server; rollback may restore prior use."""
     compose_file = INSTALL_DIR / "extensions" / "services" / "cafe-llama" / "compose.yaml"
     model_path = str(env.get("CAFE_LLAMA_MODEL") or "").strip()
     if not compose_file.is_file():
         raise RuntimeError("cafe-llama is enabled but its extension compose file is not installed")
     if not model_path.startswith("/models/") or model_path == "/models/":
         raise RuntimeError("cafe-llama requires CAFE_LLAMA_MODEL under /models")
-    if str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower() not in {"1", "true", "yes", "on"}:
+    if (
+        not allow_disabled
+        and str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower()
+        not in {"1", "true", "yes", "on"}
+    ):
         raise RuntimeError("cafe-llama activation requires explicit CAFE_LLAMA_ENABLED opt-in")
     nvidia_overlay = compose_file.with_name("compose.nvidia.yaml")
     if not nvidia_overlay.is_file():
