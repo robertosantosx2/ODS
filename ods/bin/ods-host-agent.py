@@ -14935,7 +14935,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                 model_store_root = (INSTALL_DIR / "data" / "models").resolve()
                 try:
                     target.resolve().relative_to(model_store_root)
-                except (OSError, ValueError):
+                except (OSError, RuntimeError, ValueError):
                     raise RuntimeError(
                         "cafe-llama currently requires the selected model file under ODS data/models"
                     ) from None
