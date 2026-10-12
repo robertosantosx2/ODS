@@ -14916,6 +14916,7 @@ class AgentHandler(BaseHTTPRequestHandler):
                 if not model_name or model_name in {".", ".."}:
                     raise RuntimeError("Selected model has no safe filename for the cafe-llama mount")
                 env["CAFE_LLAMA_MODEL"] = f"/models/{model_name}"
+                env["_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE"] = "true"
                 env["LLM_API_URL"] = "http://cafe-llama:8081/v1"
                 runtime_restart_strategy = "compose-cafe-llama"
                 switchboard_adapter = _switchboard_adapters.CafeLlamaAdapter(
@@ -15720,6 +15721,27 @@ def _cafe_llama_enabled(env: dict) -> bool:
     return str(env.get("CAFE_LLAMA_ENABLED") or "").strip().lower() == "true"
 
 
+def _cafe_llama_runtime_selected(env: dict) -> bool:
+    """Use cafe only for the in-flight candidate or a previously verified route."""
+    if not _cafe_llama_enabled(env):
+        return False
+    if str(env.get("_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE") or "").lower() == "true":
+        return True
+    try:
+        state = json.loads((INSTALL_DIR / "data" / "model-state.json").read_text(encoding="utf-8"))
+        active = state.get("active") if isinstance(state, dict) else None
+        backend = active.get("backend") if isinstance(active, dict) else None
+        proof = active.get("proof") if isinstance(active, dict) else None
+        return bool(
+            isinstance(backend, dict)
+            and backend.get("kind") == "cafe-llama"
+            and isinstance(proof, dict)
+            and proof.get("completion") is True
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return False
+
+
 def _runtime_endpoint(env: dict) -> tuple[str, str]:
     """Return ``(origin, transport)`` of the configured llama-server runtime.
 
@@ -15730,7 +15752,7 @@ def _runtime_endpoint(env: dict) -> tuple[str, str]:
     origin. Every other runtime is reached ``direct``: the container by
     Docker DNS or its published port, a host-native server on loopback.
     """
-    if _cafe_llama_enabled(env):
+    if _cafe_llama_runtime_selected(env):
         port = str(env.get("EXT_CAFE_LLAMA_PORT") or "8081")
         return f"http://127.0.0.1:{port}", "direct"
     if _runtime_uses_router_transport(env):
@@ -17162,7 +17184,7 @@ def _normal_switchboard_mode(env: dict) -> str:
 
 def _runtime_llama_api_base(env: dict) -> str:
     """Container-visible OpenAI base (``.../v1``) of the managed runtime."""
-    if _cafe_llama_enabled(env):
+    if _cafe_llama_runtime_selected(env):
         return "http://cafe-llama:8081/v1"
     if _runtime_uses_router_transport(env) or _is_windows_host_llama_server(env):
         return f"{_native_llm_container_origin(env)}/v1"
