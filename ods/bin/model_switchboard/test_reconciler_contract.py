@@ -90,6 +90,30 @@ def test_reconciler_rejects_completion_without_real_generation_evidence():
     assert result["phase"] == "verify_completion"
     assert "real generated completion" in result["detail"]
 
+def test_cafe_llama_route_is_accepted_by_model_state(tmp_path):
+    from ods.bin.model_switchboard.state import read_state, record_verified_route
+
+    state_path = tmp_path / "model-state.json"
+    record_verified_route(
+        state_path,
+        catalog_id="test-model",
+        runtime_model_id="/models/test.gguf",
+        backend_kind="cafe-llama",
+        endpoint_id="cafe-llama-default",
+        context_length=4096,
+        capabilities={"chat": True, "tools": False, "vision": False, "agentViable": False},
+        proof_identity="/models/test.gguf",
+        proof_completion=True,
+    )
+    state, errors = read_state(state_path)
+    assert errors == []
+    assert state["active"]["backend"] == {
+        "kind": "cafe-llama",
+        "endpointId": "cafe-llama-default",
+        "nativeRoute": None,
+    }
+
+
 def test_cafe_llama_adapter_is_explicitly_identified_and_requires_real_completion():
     def wait_ready(env, gguf_file, context_length, *, lemonade_model_id=""):
         return {**PROOF, "verifiedAt": datetime.now(timezone.utc).isoformat()}
