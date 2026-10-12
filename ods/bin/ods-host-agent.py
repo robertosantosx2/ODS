@@ -14310,7 +14310,12 @@ class AgentHandler(BaseHTTPRequestHandler):
                 )
             elif runtime_restart_strategy == "compose-cafe-llama":
                 _compose_stop_cafe_llama_server()
-                if _cafe_llama_enabled(rollback_env):
+                if _cafe_llama_runtime_selected(rollback_env):
+                    previous_model_name = Path(str(rollback_env.get("GGUF_FILE") or "")).name
+                    if not previous_model_name:
+                        raise RuntimeError("Previous cafe-llama model identity is unavailable for rollback")
+                    rollback_env["CAFE_LLAMA_MODEL"] = f"/models/{previous_model_name}"
+                    rollback_env["_ODS_CAFE_LLAMA_ACTIVATION_CANDIDATE"] = "true"
                     _compose_restart_cafe_llama_server(rollback_env)
                 else:
                     _compose_restart_llama_server(rollback_env)
@@ -14909,6 +14914,10 @@ class AgentHandler(BaseHTTPRequestHandler):
             if cafe_requested:
                 if str(env.get("ODS_MODE") or "local").strip().lower() != "local":
                     raise RuntimeError("cafe-llama activation is supported only in ODS_MODE=local")
+                if _normal_switchboard_mode(env) != "enabled":
+                    raise RuntimeError(
+                        "cafe-llama requires the model switchboard so route publication is proof-gated"
+                    )
                 cafe_backend = str(env.get("GPU_BACKEND") or "nvidia").strip().lower()
                 if (
                     platform.system().lower() != "linux"
