@@ -263,6 +263,7 @@ class LemonadeAdapter:
         self._verified_context = 0
         self._context_verified = False
         self._verified_at = ""
+        self._completion_verified = False
 
     def _verification_result(self, detail: str) -> dict[str, Any]:
         return result(
@@ -273,6 +274,7 @@ class LemonadeAdapter:
             contextVerified=self._context_verified,
             capabilities=dict(self._capabilities),
             verifiedAt=self._verified_at,
+            completionVerified=self._completion_verified,
         )
 
     def stage(self, env: dict[str, str]) -> dict[str, Any]:
@@ -283,6 +285,12 @@ class LemonadeAdapter:
         return result(True, "lemonade runtime staged inline")
 
     def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        # A failed retry must not reuse a prior completion proof.
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
         try:
             runtime_proof = self._wait_ready(
                 env,
@@ -316,11 +324,13 @@ class LemonadeAdapter:
         self._verified_context = runtime_context
         self._context_verified = context_verified
         self._verified_at = verified_at.strip()
-        return self._verification_result("lemonade runtime reports staged model")
+        # The readiness helper returns only after a real chat completion.
+        self._completion_verified = True
+        return self._verification_result("lemonade identity and real completion proven")
 
     def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
-        if not self._verified_identity:
-            return result(False, "completion proof has no runtime identity")
+        if not self._verified_identity or not self._completion_verified:
+            return result(False, "no successful real completion proof is available")
         return self._verification_result(
             "completion proven during lemonade readiness wait"
         )
