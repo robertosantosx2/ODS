@@ -6,7 +6,7 @@ services:
       args:
         # Override for non-CUDA hosts, e.g.:
         # CAFE_LLAMA_RELEASE_URL=https://github.com/quimmedes/cafe-llama.cpp/releases/download/0.75/llama-bin-ubuntu-x64-cpu.zip
-        CAFE_LLAMA_RELEASE_URL: ${CAFE_LLAMA_RELEASE_URL:-}
+        CAFE_LLAMA_RELEASE_URL: ${CAFE_LLAMA_RELEASE_URL:-https://github.com/quimmedes/cafe-llama.cpp/releases/download/0.75/llama-bin-ubuntu-x64-cuda-12.4.zip}
     image: ods-cafe-llama:local
     container_name: ods-cafe-llama
     restart: unless-stopped
