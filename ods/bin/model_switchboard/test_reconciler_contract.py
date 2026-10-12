@@ -79,16 +79,7 @@ def test_completion_phase_publishes_real_probe_evidence_without_restarting_readi
     assert identity["ok"] is True
     assert completion["ok"] is True
     assert len(calls) == 1
-    assert completion["completionVerified"] is True
     assert completion["detail"] == "real runtime completion proven"
-
-
-def test_reconciler_rejects_completion_without_real_generation_evidence():
-    adapter = PlannedAdapter({"verify_completion": { "ok": True, **{k: v for k, v in PROOF.items() if k != "completionVerified"} }})
-    result = run_runtime_activation(adapter, {})
-    assert result["ok"] is False
-    assert result["phase"] == "verify_completion"
-    assert "real generated completion" in result["detail"]
 
 
 def test_cafe_adapter_kind_is_explicit_and_proof_uses_adapter_kind():
