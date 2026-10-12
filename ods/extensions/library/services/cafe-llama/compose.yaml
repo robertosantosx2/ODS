@@ -15,7 +15,7 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${EXT_CAFE_LLAMA_PORT:-8081}:8081"
     volumes:
-      - ${ODS_MODELS_DIR:-./data/models}:/models:ro
+      - ./data/models:/models:ro
     environment:
       - CAFE_LLAMA_HOST=0.0.0.0
       - CAFE_LLAMA_PORT=8081
