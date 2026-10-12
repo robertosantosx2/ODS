@@ -55,7 +55,7 @@ class RuntimeAdapter(Protocol):
 
 
 class ReadinessProbe(Protocol):
-    """Return runtime-carried identity, context, and proof time."""
+    """Return identity/context only after a real chat completion succeeds."""
 
     def __call__(
         self,
@@ -109,6 +109,7 @@ class ContainerLlamaAdapter:
         self._verified_context = 0
         self._context_verified = False
         self._verified_at = ""
+        self._completion_verified = False
 
     def _verification_result(self, detail: str) -> dict[str, Any]:
         return result(
@@ -119,6 +120,7 @@ class ContainerLlamaAdapter:
             contextVerified=self._context_verified,
             capabilities=dict(self._capabilities),
             verifiedAt=self._verified_at,
+            completionVerified=self._completion_verified,
         )
 
     def stage(self, env: dict[str, str]) -> dict[str, Any]:
@@ -129,6 +131,12 @@ class ContainerLlamaAdapter:
         return result(True, "compose restart issued")
 
     def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        # Clear prior proof so a failed retry cannot reuse an earlier generation.
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
         # Readiness in the container path proves identity and serving state
         # in one bounded wait, mirroring the pre-adapter inline behavior.
         try:
@@ -161,18 +169,20 @@ class ContainerLlamaAdapter:
         self._verified_identity = runtime_identity.strip()
         self._verified_context = runtime_context
         self._context_verified = context_verified
+        # The host readiness helper returns only after identity/context checks
+        # and a real chat completion. Preserve that generation evidence.
+        self._completion_verified = True
         self._verified_at = verified_at.strip()
         return self._verification_result(
-            "runtime reports staged model and completed proof request"
+            "runtime identity and real completion proven by readiness probe"
         )
 
     def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
-        # _wait_for_model_readiness returns an identity only after a meaningful
-        # completion reports the same concrete model. Do not echo configuration.
-        if not self._verified_identity:
-            return result(False, "completion proof has no runtime identity")
-        return self._verification_result("completion proven during readiness wait")
-
+        # Avoid a second expensive readiness cycle. verify_identity delegates
+        # to the host readiness helper, which must complete a real chat request.
+        if not self._verified_identity or not self._completion_verified:
+            return result(False, "no successful real completion proof is available")
+        return self._verification_result("real runtime completion proven")
     def publish_native_alias(self, env: dict[str, str]) -> dict[str, Any]:
         return result(True, "native alias not required for llama.cpp")
 
@@ -253,6 +263,7 @@ class LemonadeAdapter:
         self._verified_context = 0
         self._context_verified = False
         self._verified_at = ""
+        self._completion_verified = False
 
     def _verification_result(self, detail: str) -> dict[str, Any]:
         return result(
@@ -263,6 +274,7 @@ class LemonadeAdapter:
             contextVerified=self._context_verified,
             capabilities=dict(self._capabilities),
             verifiedAt=self._verified_at,
+            completionVerified=self._completion_verified,
         )
 
     def stage(self, env: dict[str, str]) -> dict[str, Any]:
@@ -273,6 +285,12 @@ class LemonadeAdapter:
         return result(True, "lemonade runtime staged inline")
 
     def verify_identity(self, env: dict[str, str]) -> dict[str, Any]:
+        # A failed retry must not reuse a prior completion proof.
+        self._verified_identity = ""
+        self._verified_context = 0
+        self._context_verified = False
+        self._verified_at = ""
+        self._completion_verified = False
         try:
             runtime_proof = self._wait_ready(
                 env,
@@ -306,11 +324,13 @@ class LemonadeAdapter:
         self._verified_context = runtime_context
         self._context_verified = context_verified
         self._verified_at = verified_at.strip()
-        return self._verification_result("lemonade runtime reports staged model")
+        # The readiness helper returns only after a real chat completion.
+        self._completion_verified = True
+        return self._verification_result("lemonade identity and real completion proven")
 
     def verify_completion(self, env: dict[str, str]) -> dict[str, Any]:
-        if not self._verified_identity:
-            return result(False, "completion proof has no runtime identity")
+        if not self._verified_identity or not self._completion_verified:
+            return result(False, "no successful real completion proof is available")
         return self._verification_result(
             "completion proven during lemonade readiness wait"
         )
@@ -372,3 +392,14 @@ class FakeAdapter:
 
     def rollback(self, env: dict[str, str]) -> dict[str, Any]:
         return self._next("rollback")
+
+
+class CafeLlamaAdapter(ContainerLlamaAdapter):
+    """Opt-in cafe-llama.cpp runtime using the same fail-closed proof contract.
+
+    The host agent must inject a cafe-specific restart callback and readiness
+    probe; this adapter intentionally does not guess ports, compose paths, or
+    model identity. It cannot be used as a drop-in default for llama-server.
+    """
+
+    kind = "cafe-llama"

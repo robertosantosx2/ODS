@@ -28,6 +28,7 @@ def _proof_result(identity="M.gguf", **overrides):
             "agentViable": True,
         },
         "verifiedAt": "2026-07-20T00:00:00Z",
+        "completionVerified": True,
     }
     payload.update(overrides)
     return ad.result(True, **payload)
@@ -171,7 +172,7 @@ class TestReconcilerBoundaries:
 
         run = rc.run_runtime_activation(Weird(), {})
         assert run["ok"] is False and run["phase"] == "stage"
-        assert "non-contract" in run["detail"]
+        assert "boolean ok" in run["detail"]
 
 
 class TestContainerLlamaAdapter:

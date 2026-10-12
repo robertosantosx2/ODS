@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Override for non-CUDA hosts, e.g.:
+        # CAFE_LLAMA_RELEASE_URL=https://github.com/quimmedes/cafe-llama.cpp/releases/download/0.75/llama-bin-ubuntu-x64-cpu.zip
+        CAFE_LLAMA_RELEASE_URL: ${CAFE_LLAMA_RELEASE_URL:-}
     image: ods-cafe-llama:local
     container_name: ods-cafe-llama
     restart: unless-stopped
@@ -11,11 +15,12 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${EXT_CAFE_LLAMA_PORT:-8081}:8081"
     volumes:
-      - ${ODS_MODELS_DIR:-./data/models}:/models:ro
+      - ../../../data/models:/models:ro
     environment:
       - CAFE_LLAMA_HOST=0.0.0.0
       - CAFE_LLAMA_PORT=8081
       - CAFE_LLAMA_MODEL=${CAFE_LLAMA_MODEL:-}
+      - CAFE_LLAMA_SERVER=${CAFE_LLAMA_SERVER:-}
       - CAFE_LLAMA_EXTRA_ARGS=${CAFE_LLAMA_EXTRA_ARGS:-}
       - LLAMA_ARG_HOST_MOE=${LLAMA_ARG_HOST_MOE:-}
       - LLAMA_ARG_N_HOST_MOE=${LLAMA_ARG_N_HOST_MOE:-}
@@ -36,7 +41,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 90s
+      start_period: 120s
     networks:
       - ods-network
 

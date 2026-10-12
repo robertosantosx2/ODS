@@ -17,6 +17,35 @@ Use it when you need:
 
 It remains OpenAI-compatible and GGUF-compatible, so Portal, Open WebUI, Hermes, LiteLLM, and external clients can keep the same API base URL once routing points at this runtime.
 
+## Architecture alignment (ICD)
+
+```
+Model selection
+      ↓
+Runtime profile
+      ↓
+Inference Configuration Discovery
+      ↓
+┌──────────────────────────────┐
+│ Dashboard editor             │
+│ GPU layers / Context /       │
+│ KV cache K/V / KV offload /  │
+│ Flash Attention / MoE offload│
+│ Batch / Speculation-MTP /    │
+│ Draft tokens                 │
+└──────────────────────────────┘
+      ↓
+runtime validation
+      ↓
+ODS env update
+      ↓
+llama-server recreate (cafe-llama)
+      ↓
+benchmark
+      ↓
+MEASURED configuration_id
+```
+
 ## Enable (`ods enable cafe-llama`)
 
 ```bash
@@ -28,15 +57,13 @@ ods start cafe-llama
 
 Library recipe: `extensions/library/services/cafe-llama/`
 
-1. Ensure a cafe-llama.cpp `llama-server` binary is available (build image with `CAFE_LLAMA_RELEASE_URL` or set `CAFE_LLAMA_SERVER`).
+1. The image downloads a prebuilt binary by default (0.75 Linux CUDA x64).
 2. Set `CAFE_LLAMA_MODEL` to a GGUF/safetensors path under the models volume.
 3. Optional advanced flags via `.env` / Dashboard (see below).
 
 Default listen: host port **8081** (`EXT_CAFE_LLAMA_PORT`).
 
-## Dashboard / `.env.schema`
-
-Settings surface for operators:
+## Dashboard / `.env` keys
 
 | Key | Purpose |
 |-----|---------|
@@ -53,27 +80,32 @@ Settings surface for operators:
 | `LLAMA_ARG_PIPELINE_PARALLEL` | Host→device overlap |
 | `LLAMA_ARG_NO_NGRAM` / `LLAMA_ARG_NGRAM_SSD` | Qwen Flash Next PLE |
 
-Schema fragment (merge into `ods/.env.schema.json` `properties` for full Dashboard validation):
+Recommended starting point (MoE + long context on 8–24 GB):
 
-`extensions/library/services/cafe-llama/env.schema.fragment.json`
-
-Existing stock keys already present in core schema (e.g. `LLAMA_ARG_N_CPU_MOE`, `LLAMA_ARG_FLASH_ATTN`, `LLAMA_ARG_SPEC_*`) continue to apply.
+```bash
+LLAMA_ARG_HOST_MOE=on
+LLAMA_ARG_CACHE_TYPE_K=turbo4
+LLAMA_ARG_CACHE_TYPE_V=turbo4
+LLAMA_ARG_FLASH_ATTN=on
+LLAMA_ARG_SPEC_TYPE=draft-mtp
+LLAMA_ARG_SPEC_DRAFT_N_MAX=4
+```
 
 ## Evidence rules
 
 | Class | Meaning |
 |-------|---------|
-| REPORTED | Published by upstream or third parties |
-| OBSERVED | Verified from docs/releases/code |
-| ESTIMATED | Pre-run viability guess |
-| MEASURED | Produced on target hardware under controlled workload |
+| **REPORTED** | Cifras publicadas por el proyecto o terceros |
+| **OBSERVED** | Capacidad verificada en README / releases / código |
+| **ESTIMATED** | Inferencia de viabilidad antes de ejecutar |
+| **MEASURED** | Resultado producido por LEONES en hardware objetivo |
 
 Only **MEASURED** results justify local performance claims.
 
 ## Out of scope (follow-ups)
 
 - Installer auto-promotion of cafe-llama as a first-class `LLM_BACKEND` value
-- Full merge of the schema fragment into root `.env.schema.json` (if not done in the same PR)
+- Full merge of the schema fragment into root `.env.schema.json`
 - Automatic ICD sweeps / recommended profiles
 - Replacement of default `llama-server` paths
 
