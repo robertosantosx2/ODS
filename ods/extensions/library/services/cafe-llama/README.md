@@ -13,29 +13,24 @@ Does **not** replace the core `llama-server` service or `LLM_BACKEND=llama-serve
 - Native safetensors loading
 - OpenAI-compatible API (same clients as core llama-server)
 
-## Enable
+## Enable (explicit opt-in)
 
-```bash
-# From an ODS install tree:
-cp -r extensions/library/services/cafe-llama extensions/services/cafe-llama
-ods enable cafe-llama
-ods start cafe-llama
-```
+The service recipe must first be installed at `extensions/services/cafe-llama`.
+The host agent currently supports runtime activation only on host-native Linux
+with NVIDIA, or CPU when a compatible `CAFE_LLAMA_RELEASE_URL` is configured.
+WSL-managed, agent-in-container, macOS, and AMD paths fail closed. The core
+`llama-server` remains the default.
 
-Set in `.env` (also exposed in Dashboard settings):
+Set `CAFE_LLAMA_ENABLED=true` in `.env` only when you intend subsequent model
+activation requests to use cafe-llama. The host agent supplies the selected
+GGUF path to the container; do not hard-code a different model in
+`CAFE_LLAMA_MODEL`. Before switching routes it verifies `/health`,
+`/v1/models`, the requested context, and a real chat completion. On failure,
+the prior runtime and route are restored.
 
-```bash
-CAFE_LLAMA_MODEL=/models/your-model.gguf
-EXT_CAFE_LLAMA_PORT=8081
-
-# Recommended starting point for MoE + long context on 8–24 GB GPUs:
-LLAMA_ARG_HOST_MOE=on
-LLAMA_ARG_CACHE_TYPE_K=turbo4
-LLAMA_ARG_CACHE_TYPE_V=turbo4
-LLAMA_ARG_FLASH_ATTN=on
-LLAMA_ARG_SPEC_TYPE=draft-mtp
-LLAMA_ARG_SPEC_DRAFT_N_MAX=4
-```
+`ods enable cafe-llama` is not introduced by this change; install the recipe
+through the available ODS extension installation path or copy it into place
+before enabling the flag.
 
 ### Image build
 
