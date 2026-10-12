@@ -135,7 +135,7 @@ def run_runtime_activation(
                 *runtime_fields,
             )
             if phase == "verify_completion" and any(
-                outcome_proof[field] != proof[field] for field in stable_fields
+                outcome_proof.get(field) != proof.get(field) for field in stable_fields
             ):
                 return {
                     "ok": False,
