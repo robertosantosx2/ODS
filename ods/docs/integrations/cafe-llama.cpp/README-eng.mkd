@@ -17,7 +17,7 @@ cafe-llama.cpp is a llama.cpp fork focused on real capacity for large MoE models
 - Qwen 3.8 Flash Next PLE / N-gram table controls
 - Strong MTP speculative decoding (`--spec-type draft-mtp`, recommended `--spec-draft-n-max 4`)
 - Native safetensors loading (no intermediate GGUF)
-- Multi-platform prebuilt binaries
+- Linux x64 prebuilt binaries are available; other build targets require a compatible release archive and are not enabled by the ODS activation hook.
 
 **Role in ODS:** optional advanced runtime that remains API- and GGUF-compatible with the existing `llama-server`. It expands the configuration space that Inference Configuration Discovery (ICD) can explore; it does not replace the baseline runtime.
 
@@ -38,7 +38,7 @@ Expose priority flags in Dashboard advanced settings and `LLAMA_ARG_*` / Model S
 - `--no-ngram` / `--ngram-ssd`
 - batch / threads / parallel
 
-Activation: `ods enable cafe-llama` or runtime selector per model/profile.
+Activation: explicit `CAFE_LLAMA_ENABLED=true` plus a model activation request, after the curated service recipe is installed. The host agent currently supports host-native Linux NVIDIA or explicitly configured CPU builds; the standard `llama-server` remains the default.
 
 ## Evidence rules (LEONES)
 
