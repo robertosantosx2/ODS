@@ -28,6 +28,10 @@ service:
       required: false
       default: "false"
       description: Opt-in marker for cafe-llama (does not change LLM_BACKEND)
+    - key: CAFE_LLAMA_ACTIVE
+      required: false
+      default: "false"
+      description: Host-agent-managed active runtime marker; do not edit manually
     - key: CAFE_LLAMA_MODEL
       required: false
       default: ""
