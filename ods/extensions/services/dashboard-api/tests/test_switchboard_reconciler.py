@@ -33,6 +33,7 @@ def _proof_result(identity="M.gguf", **overrides):
             "agentViable": True,
         },
         "verifiedAt": "2026-07-20T00:00:00Z",
+        "completionVerified": True,
     }
     payload.update(overrides)
     return ad.result(True, **payload)
