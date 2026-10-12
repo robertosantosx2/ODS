@@ -4395,7 +4395,8 @@ def _publish_activation_route(env: dict, model_id: str, proof: dict, capabilitie
             or not isinstance(proof.get("contextLength"), int)
             or proof["contextLength"] <= 0):
         raise RuntimeError("Cannot publish an unverified model-router target")
-    if runtime_kind == "cafe-llama" or _cafe_llama_enabled(env):
+    runtime_kind = str(proof.get("runtimeKind") or "llama-server")
+    if runtime_kind == "cafe-llama":
         backend_kind = "cafe-llama"
         endpoint_id = "cafe-llama-default"
     else:
@@ -14458,6 +14459,15 @@ class AgentHandler(BaseHTTPRequestHandler):
                 if router_target_published:
                     # Readers reject regressed sequences: publish a newly proven
                     # rollback route instead of restoring stale model-state bytes.
+                    previous_backend = (
+                        previous_router_active.get("backend")
+                        if isinstance(previous_router_active, dict) else None
+                    )
+                    previous_proof = dict(previous_proof)
+                    previous_proof["runtimeKind"] = (
+                        previous_backend.get("kind")
+                        if isinstance(previous_backend, dict) else "llama-server"
+                    )
                     _publish_activation_route(
                         rollback_env, previous_router_active.get("catalogId") or previous_model,
                         previous_proof, previous_router_active.get("capabilities") or {})
