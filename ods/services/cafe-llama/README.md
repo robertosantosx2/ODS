@@ -1,27 +1,29 @@
-# cafe-llama service (scaffold)
+# cafe-llama service contract
 
 Optional advanced inference runtime based on [cafe-llama.cpp](https://github.com/quimmedes/cafe-llama.cpp).
 
-This directory is a **scaffold**. It defines the intended service contract; full installer and Dashboard integration are follow-up work.
+The curated Docker recipe lives in `ods/extensions/library/services/cafe-llama/`.
+Runtime selection is opt-in through `CAFE_LLAMA_ENABLED=true` and a normal model
+activation request. The host agent currently supports host-native Linux with
+NVIDIA, or CPU with an explicitly configured compatible `CAFE_LLAMA_RELEASE_URL`.
+Other runtime ownership/platform combinations fail closed.
 
-## Intent
+## Runtime guarantees
 
-- Opt-in only (`ods enable cafe-llama` or explicit runtime selection)
-- Same OpenAI-compatible surface as `llama-server` where possible
-- Expose MoE offload, Turbo KV, MTP, and PLE-related flags
-- Prefer upstream prebuilt binaries from cafe-llama.cpp releases
+- The standard `llama-server` remains the default when opt-in is disabled.
+- ODS does not publish the cafe route until health, model identity, context, and
+  a real visible chat completion have been verified.
+- The competing runtime is stopped during handoff to avoid double VRAM use.
+- A failed activation attempts to restore the previously active backend and
+  its route.
+- Upstream performance reports are not MEASURED evidence for local hardware.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `manifest.yaml` | Capability and config contract |
-| `entrypoint.sh` | Placeholder process launcher |
-| `README.md` | This file |
+| `manifest.yaml` | Capability and configuration contract |
+| `entrypoint.sh` | Launcher contract for the upstream cafe-compatible binary |
+| `README.md` | Runtime scope and guarantees |
 
 Operator documentation: `ods/docs/CAFE-LLAMA.md`
-
-## Non-goals
-
-- Do not disable or replace the default `llama-server` service
-- Do not treat upstream benchmarks as MEASURED local evidence
