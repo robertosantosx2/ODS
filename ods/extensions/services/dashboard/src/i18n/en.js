@@ -74,4 +74,6 @@ export default {
   'firstBoot.errors.generateOwnerCardFailed': "Owner-card generation failed (HTTP {{status}}).",
   'firstBoot.errors.completeFailedWithCard': "Failed to mark setup complete (HTTP {{status}}). Your owner card was generated; ask the admin to re-run setup.",
   'firstBoot.errors.completeFailed': "Failed to mark setup complete (HTTP {{status}}).",
+  'firstBoot.done.shareTitle': "ODS owner card for {{username}}",
+  'firstBoot.done.shareText': "Tap to open ODS Talk on ODS",
 }
