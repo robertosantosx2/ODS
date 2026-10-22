@@ -77,4 +77,6 @@ export default {
   'firstBoot.errors.generateOwnerCardFailed': "生成所有者卡片失败（HTTP {{status}}）。",
   'firstBoot.errors.completeFailedWithCard': "标记设置完成失败（HTTP {{status}}）。所有者卡片已生成；请联系管理员重新运行设置。",
   'firstBoot.errors.completeFailed': "标记设置完成失败（HTTP {{status}}）。",
+  'firstBoot.done.shareTitle': "{{username}} 的 ODS 所有者卡片",
+  'firstBoot.done.shareText': "轻触以在 ODS 上打开 ODS Talk",
 }
