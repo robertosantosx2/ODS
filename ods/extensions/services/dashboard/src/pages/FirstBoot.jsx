@@ -105,7 +105,7 @@ export default function FirstBoot({ onComplete }) {
   const prev = () => setStep(s => Math.max(s - 1, 1))
   const ownerCardStatusLoading = ownerCardStatus === null
   const ownerCardUnavailable = ownerCardStatus?.ready === false
-  const ownerCardUnavailableReason = ownerCardStatus?.reason || 'Enable ODS proxy before generating owner cards.'
+  const ownerCardUnavailableReason = ownerCardStatus?.reason || t('firstBoot.errors.proxyRequired')
 
   useEffect(() => {
     let cancelled = false
@@ -116,7 +116,7 @@ export default function FirstBoot({ onComplete }) {
           if (!cancelled) {
             setOwnerCardStatus({
               ready: false,
-              reason: `Owner-card status unavailable (${resp.status})`,
+              reason: t('firstBoot.errors.ownerCardStatusUnavailableWithStatus', { status: resp.status }),
             })
           }
           return
@@ -127,7 +127,7 @@ export default function FirstBoot({ onComplete }) {
         if (!cancelled) {
           setOwnerCardStatus({
             ready: false,
-            reason: 'Owner-card status unavailable.',
+            reason: t('firstBoot.errors.ownerCardStatusUnavailable'),
           })
         }
       }
@@ -139,14 +139,14 @@ export default function FirstBoot({ onComplete }) {
   const finish = async () => {
     setFinishError(null)
     if (ownerCardStatusLoading) {
-      setFinishError('Checking owner-card readiness. Try again in a moment.')
+      setFinishError(t('firstBoot.errors.checkingOwnerCardReadiness'))
       return
     }
     setFinishing(true)
     try {
       const selectedStack = STACK_OPTIONS.find(option => option.id === stack)
       if (!selectedStack) {
-        throw new Error('The selected stack is no longer available. Go back and choose another option.')
+        throw new Error(t('firstBoot.errors.stackUnavailable'))
       }
 
       if (!pendingInvite && selectedStack.templateId) {
@@ -155,7 +155,7 @@ export default function FirstBoot({ onComplete }) {
         })
         if (!applyResp.ok) {
           const body = await applyResp.json().catch(() => ({}))
-          throw new Error(body.detail || `Failed to configure ${selectedStack.title} (${applyResp.status}).`)
+          throw new Error(body.detail || t('firstBoot.errors.configureStackFailed', { stack: selectedStack.title, status: applyResp.status }))
         }
 
         const applyResult = await applyResp.json()
@@ -169,19 +169,19 @@ export default function FirstBoot({ onComplete }) {
           !Number.isInteger(startedCount) || startedCount < 0 ||
           startedCount > enabledCount
         if (invalidReceipt) {
-          throw new Error(`${selectedStack.title} returned an invalid apply result. Retry Finish after updating ODS.`)
+          throw new Error(t('firstBoot.errors.invalidApplyResult', { stack: selectedStack.title }))
         }
         const incompleteStart = startedCount < enabledCount
         if (failed.length > 0 || skipped.length > 0 || incompleteStart) {
           const details = [
-            failed.length > 0 ? `failed to start: ${failed.join(', ')}` : null,
-            skipped.length > 0 ? `not compatible or unavailable: ${skipped.join(', ')}` : null,
-            incompleteStart ? `started ${startedCount} of ${enabledCount} enabled services` : null,
+            failed.length > 0 ? t('firstBoot.errors.failedToStart', { services: failed.join(', ') }) : null,
+            skipped.length > 0 ? t('firstBoot.errors.incompatibleServices', { services: skipped.join(', ') }) : null,
+            incompleteStart ? t('firstBoot.errors.startedCount', { started: startedCount, enabled: enabledCount }) : null,
           ].filter(Boolean).join('; ')
           const recovery = applyResult.restart_required
-            ? ' Run ods restart, then retry Finish.'
-            : ' Go back and choose another stack, or resolve the listed services and retry.'
-          throw new Error(`${selectedStack.title} was only partially configured (${details}).${recovery}`)
+            ? ` ${t('firstBoot.errors.restartThenRetry')}`
+            : ` ${t('firstBoot.errors.chooseAnotherStackOrResolve')}`
+          throw new Error(t('firstBoot.errors.partialConfiguration', { stack: selectedStack.title, details, recovery }))
         }
       }
 
@@ -202,7 +202,7 @@ export default function FirstBoot({ onComplete }) {
         })
         if (!genResp.ok) {
           const body = await genResp.json().catch(() => ({}))
-          throw new Error(body.detail || `generate failed: ${genResp.status}`)
+          throw new Error(body.detail || t('firstBoot.errors.generateOwnerCardFailed', { status: genResp.status }))
         }
         inviteData = await genResp.json()
         // The credential has already been issued. Retain it before the next
@@ -220,8 +220,8 @@ export default function FirstBoot({ onComplete }) {
       if (!completeResp.ok) {
         const body = await completeResp.json().catch(() => ({}))
         const fallback = inviteData
-          ? `Failed to mark setup complete (${completeResp.status}). Your owner card was generated; ask the admin to re-run setup.`
-          : `Failed to mark setup complete (${completeResp.status}).`
+          ? t('firstBoot.errors.completeFailedWithCard', { status: completeResp.status })
+          : t('firstBoot.errors.completeFailed', { status: completeResp.status })
         throw new Error(
           body.detail || fallback,
         )
@@ -644,7 +644,7 @@ function DoneScreen({ invite, onDone }) {
           `/api/auth/magic-link/qr?url=${encodeURIComponent(invite.url)}`,
         )
         if (!resp.ok) {
-          if (!cancelled) setQrError('QR generation unavailable on the server.')
+          if (!cancelled) setQrError(t('firstBoot.done.qrUnavailable'))
           return
         }
         const data = await resp.json()
