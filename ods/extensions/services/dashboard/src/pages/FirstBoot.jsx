@@ -155,7 +155,7 @@ export default function FirstBoot({ onComplete }) {
         })
         if (!applyResp.ok) {
           const body = await applyResp.json().catch(() => ({}))
-          throw new Error(body.detail || t('firstBoot.errors.configureStackFailed', { stack: selectedStack.title, status: applyResp.status }))
+          throw new Error(body.detail || t('firstBoot.errors.configureStackFailed', { stack: t(selectedStack.titleKey), status: applyResp.status }))
         }
 
         const applyResult = await applyResp.json()
@@ -169,7 +169,7 @@ export default function FirstBoot({ onComplete }) {
           !Number.isInteger(startedCount) || startedCount < 0 ||
           startedCount > enabledCount
         if (invalidReceipt) {
-          throw new Error(t('firstBoot.errors.invalidApplyResult', { stack: selectedStack.title }))
+          throw new Error(t('firstBoot.errors.invalidApplyResult', { stack: t(selectedStack.titleKey) }))
         }
         const incompleteStart = startedCount < enabledCount
         if (failed.length > 0 || skipped.length > 0 || incompleteStart) {
@@ -181,7 +181,7 @@ export default function FirstBoot({ onComplete }) {
           const recovery = applyResult.restart_required
             ? ` ${t('firstBoot.errors.restartThenRetry')}`
             : ` ${t('firstBoot.errors.chooseAnotherStackOrResolve')}`
-          throw new Error(t('firstBoot.errors.partialConfiguration', { stack: selectedStack.title, details, recovery }))
+          throw new Error(t('firstBoot.errors.partialConfiguration', { stack: t(selectedStack.titleKey), details, recovery }))
         }
       }
 
@@ -650,7 +650,7 @@ function DoneScreen({ invite, onDone }) {
         const data = await resp.json()
         if (!cancelled) setQrDataUrl(data.data_url)
       } catch (err) {
-        if (!cancelled) setQrError(err.message)
+        if (!cancelled) setQrError(t('firstBoot.done.qrUnavailable'))
       }
     }
     loadQr()
@@ -674,8 +674,8 @@ function DoneScreen({ invite, onDone }) {
     }
     try {
       await navigator.share({
-        title: `ODS owner card for ${invite.target_username}`,
-        text: 'Tap to open ODS Talk on ODS',
+        title: t('firstBoot.done.shareTitle', { username: invite.target_username }),
+        text: t('firstBoot.done.shareText'),
         url: invite.url,
       })
     } catch {
