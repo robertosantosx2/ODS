@@ -577,8 +577,8 @@ function ConfirmStep({
       )}
 
       {pendingInvite && <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-        <p>Your owner card was generated. Save this link before leaving the page. Finish retries setup completion using this same card.</p>
-        <label className="mt-3 block">Generated owner link
+        <p>{t('firstBoot.confirm.pendingInviteNotice')}</p>
+        <label className="mt-3 block">{t('firstBoot.confirm.generatedOwnerLink')}
           <input readOnly value={typeof pendingInvite.url === 'string' ? pendingInvite.url : ''}
             onFocus={event => event.currentTarget.select()}
             className="mt-1 w-full rounded border border-theme-border bg-theme-bg p-2 text-theme-text" />
