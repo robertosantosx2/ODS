@@ -77,4 +77,6 @@ export default {
   'firstBoot.errors.generateOwnerCardFailed': "No se pudo generar la tarjeta del propietario (HTTP {{status}}).",
   'firstBoot.errors.completeFailedWithCard': "No se pudo marcar la configuración como completada (HTTP {{status}}). La tarjeta del propietario ya se ha generado; pide al administrador que vuelva a ejecutar la configuración.",
   'firstBoot.errors.completeFailed': "No se pudo marcar la configuración como completada (HTTP {{status}}).",
+  'firstBoot.done.shareTitle': "Tarjeta de propietario de ODS para {{username}}",
+  'firstBoot.done.shareText': "Toca para abrir ODS Talk en ODS",
 }
