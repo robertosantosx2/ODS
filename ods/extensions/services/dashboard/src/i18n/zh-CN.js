@@ -79,4 +79,6 @@ export default {
   'firstBoot.errors.completeFailed': "标记设置完成失败（HTTP {{status}}）。",
   'firstBoot.done.shareTitle': "{{username}} 的 ODS 所有者卡片",
   'firstBoot.done.shareText': "轻触以在 ODS 上打开 ODS Talk",
+  'firstBoot.confirm.pendingInviteNotice': "所有者卡片已生成。离开此页面前请保存此链接。再次点击“完成”时，将使用同一张卡片重试完成设置。",
+  'firstBoot.confirm.generatedOwnerLink': "已生成的所有者链接",
 }
