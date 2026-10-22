@@ -76,4 +76,6 @@ export default {
   'firstBoot.errors.completeFailed': "Failed to mark setup complete (HTTP {{status}}).",
   'firstBoot.done.shareTitle': "ODS owner card for {{username}}",
   'firstBoot.done.shareText': "Tap to open ODS Talk on ODS",
+  'firstBoot.confirm.pendingInviteNotice': "Your owner card was generated. Save this link before leaving the page. Finish retries setup completion using this same card.",
+  'firstBoot.confirm.generatedOwnerLink': "Generated owner link",
 }
