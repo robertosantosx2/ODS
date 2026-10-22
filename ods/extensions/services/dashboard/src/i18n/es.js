@@ -79,4 +79,6 @@ export default {
   'firstBoot.errors.completeFailed': "No se pudo marcar la configuración como completada (HTTP {{status}}).",
   'firstBoot.done.shareTitle': "Tarjeta de propietario de ODS para {{username}}",
   'firstBoot.done.shareText': "Toca para abrir ODS Talk en ODS",
+  'firstBoot.confirm.pendingInviteNotice': "La tarjeta del propietario ya se ha generado. Guarda este enlace antes de salir de la página. Al pulsar Finalizar de nuevo, se intentará completar la configuración con esta misma tarjeta.",
+  'firstBoot.confirm.generatedOwnerLink': "Enlace de propietario generado",
 }
