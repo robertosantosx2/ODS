@@ -179,8 +179,8 @@ export default function FirstBoot({ onComplete }) {
             incompleteStart ? t('firstBoot.errors.startedCount', { started: startedCount, enabled: enabledCount }) : null,
           ].filter(Boolean).join('; ')
           const recovery = applyResult.restart_required
-            ? ` ${t('firstBoot.errors.restartThenRetry')}`
-            : ` ${t('firstBoot.errors.chooseAnotherStackOrResolve')}`
+            ? t('firstBoot.errors.restartThenRetry')
+            : t('firstBoot.errors.chooseAnotherStackOrResolve')
           throw new Error(t('firstBoot.errors.partialConfiguration', { stack: t(selectedStack.titleKey), details, recovery }))
         }
       }
